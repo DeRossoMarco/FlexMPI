@@ -23,7 +23,7 @@ The following libraries and compiler are required for compilation:
 ## How do I get set up? ##
 
 bash
-git clone https://github.com/arcosuc3m/flexmpi
+git clone https://github.com/arcosuc3m/FlexMPI
 
  Assumming that FlexMPI is installed in ~/FlexMPI 
 bash
