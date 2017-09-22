@@ -4,9 +4,11 @@ FLEX-MPI is a runtime system that extends the functionalities of the MPI library
 
 The project goals are:
  
-*To provide MPI applications of malleable capabilities that permit to specify a given application execution time. FLEX-MPI will automatically create or remove new processes to adjust the execution time to the desired objective.
-*FLEX-MPI includes two polices that can be used in combination with the malleable capabilities. The aim is to minimize the operational cost or the application energy consumption by efficiently scheduling the application proccesses based on the cluster characteristics. Flex-MPI supports CPU-based heterogeneous multicore clusters.
-*Flex-MPI performs all the optimizations during the application execution, in a transparent way, without user intervention.
+* To provide MPI applications of malleable capabilities that permit to specify a given application execution time. FLEX-MPI will automatically create or remove new processes to adjust the execution time to the desired objective.
+
+* FLEX-MPI includes two polices that can be used in combination with the malleable capabilities. The aim is to minimize the operational cost or the application energy consumption by efficiently scheduling the application proccesses based on the cluster characteristics. Flex-MPI supports CPU-based heterogeneous multicore clusters.
+
+* Flex-MPI performs all the optimizations during the application execution, in a transparent way, without user intervention.
  
 
 ## Requirements ##
@@ -64,7 +66,7 @@ under the project TIN2013-41350-P (Scalable Data Management Techniques for High-
 
 
 ## References ##
-```
+
 
 * Gonzalo Martin, David E. Singh, Maria-Cristina Marinescu and Jesus Carretero. Enhancing the performance of malleable MPI applications by using performance-aware dynamic reconfiguration. Parallel Computing. Vol. 46, No. 0. Pages: 60-77. 2015.
 
@@ -73,5 +75,3 @@ under the project TIN2013-41350-P (Scalable Data Management Techniques for High-
 * Gonzalo Martín, David E. Singh, Maria-Cristina Marinescu and Jesús Carretero. FLEX-MPI: an MPI extension for supporting dynamic load balancing on heterogeneous non-dedicated systems. European Conference on Parallel Computing (EUROPAR). Aachen, Germany. 2013.
 
 * Gonzalo Martín, David E. Singh, Maria-Cristina Marinescu and Jesús Carretero. Runtime support for adaptive resource provisioning in MPI applications. The 19th European MPI Users’ Group Meeting – EuroMPI. Vienna, Austria. 2012.
-
-```
