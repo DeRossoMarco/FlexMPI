@@ -22,11 +22,11 @@ The following libraries and compiler are required for compilation:
 
 ## How do I get set up? ##
 
-```bash
+bash
 git clone https://github.com/arcosuc3m/flexmpi
 
-``` Assumming that FlexMPI is installed in ~/FlexMPI 
-```bash
+ Assumming that FlexMPI is installed in ~/FlexMPI 
+bash
 
 cd ~/FlexMPI
 [configure Makefile providing paths to the exisitng libraries and include files]
@@ -43,16 +43,16 @@ make
 cd ~/FlexMPI/scripts
 chmod 755 ./Lanza_Jacobi_IO.sh
 
-```Environment variables
+Environment variables
 Assumming that the libraries are installed in $HOME/LIBS
 export LD_LIBRARY_PATH=$HOME/LIBS/glpk/lib/:$HOME/FlexMPI/lib/:$HOME/LIBS/mpich/lib/:$HOME/LIBS/papi/lib/:$LD_LIBRARY_PATH
 
-```Configuration files
+onfiguration files
 It is necessary to setup the configuration files in ~/FlexMPI/configuration_files directory
 
 ## Execution ##
 
-```bash. 
+bash. 
 cd ~/FlexMPI/controller
 ./controller
 
@@ -66,7 +66,6 @@ under the project TIN2013-41350-P (Scalable Data Management Techniques for High-
 
 
 ## References ##
-
 
 * Gonzalo Martin, David E. Singh, Maria-Cristina Marinescu and Jesus Carretero. Enhancing the performance of malleable MPI applications by using performance-aware dynamic reconfiguration. Parallel Computing. Vol. 46, No. 0. Pages: 60-77. 2015.
 
