@@ -199,7 +199,7 @@ int command_listener(void)
         printf(" Command number is %d\n", command.command_n);
         switch(command.command_n)
         {
-            case 0: //command: 0:policy:t_obj:threshold
+            case 1: //command: 1:policy:t_obj:threshold
             {
 
                 if (strcmp(command.options[0], "EFFICIENCY") == 0)
@@ -317,64 +317,6 @@ int command_listener(void)
                     printf("ERROR: Malleability policy %s NOT FOUND!", command.options[0]);
                     sprintf(buf_res, "ERROR: Malleability policy %s NOT FOUND!", command.options[0]);
                 }
-                break;
-
-            }
-            case 1:
-            {
-
-                //command: 1:n_procs:node
-                //create function to spawn process or remove process in a given node.
-                //check for exiting host names with global variables
-                // EMPI_Spawn_data spawn_data;
-                // spawn_data.nprocs = atoi(command.options[0]);
-                // strcpy(spawn_data.name, command.options[1]);
-                // spawn_data.dirty = 1;
-
-                // //Set host id to spawn data
-                // printf("Spawn %d processes in node %s\n", spawn_data.nprocs, spawn_data.name);
-                // sprintf(buf_res, "Spawn %d processes in node %s\n", spawn_data.nprocs, spawn_data.name);
-
-                //command: 1:n_spawns:node:n_procs
-                //create function to spawn process or remove process in a given node.
-                int j, k, n_spawns = atoi(command.options[0]);
-                EMPI_host_type* hostlist = EMPI_GLOBAL_hostlist;//physical resources
-                EMPI_Spawn_data spawn_data;
-                spawn_data.nprocs = malloc(sizeof(int) * n_spawns);
-                spawn_data.hostid = malloc(sizeof(int) * n_spawns);
-                spawn_data.n_spawns = n_spawns;
-
-                int nhosts = EMPI_GLOBAL_nhosts;
-                char line [256];
-                sprintf(line, "Spawn/remove ");
-                for (j = 0; j < n_spawns; j++)
-                {
-                    for (k = 0; k < nhosts; k++)
-                    {
-                        char line_aux [64];
-                        // printf("%s - %s\n", command.options[(j*2)+1], hostlist[k].hostname);
-                        if (strcmp(command.options[(j*2)+1], hostlist[k].hostname) == 0)
-                        {
-                            spawn_data.nprocs[j] = atoi(command.options[(j*2)+2]);
-                            spawn_data.hostid[j] = hostlist[k].id;
-                            // strcpy(spawn_data.name[j], command.options[(j*2)+1]);
-                            sprintf(line_aux, " %d processes in node %s, ", spawn_data.nprocs[j], hostlist[k].hostname);
-                            //printf(" %d processes in node %s, ", spawn_data.nprocs[j], hostlist[k].hostname);
-                            strcat(line, line_aux);
-                            break;
-                        }
-                    }
-                }
-
-                spawn_data.dirty = 1;
-                sprintf(line, "%s\n", line);
-                printf("Line: %s\n", line);
-                strncpy(buf_res, line, strlen(line));
-
-                pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
-                EMPI_GLOBAL_spawn_data = spawn_data;
-                pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
-
                 break;
 
             }

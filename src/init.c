@@ -129,8 +129,8 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 
 	//Init MPI environment
    	//err = PMPI_Init (argc, argv);
-	
 	/*
+	
 	err = PMPI_Init_thread(argc, argv,MPI_THREAD_FUNNELED,&provided); // The new threads do not perform MPI calls
 	
    	if (err == MPI_ERR_OTHER) return MPI_ERR_OTHER;
