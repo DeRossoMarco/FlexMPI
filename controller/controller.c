@@ -69,8 +69,7 @@ struct  applicationset {
 	};
 
 // Global values
-static const char HOME[] = "/home/desingh";
-
+static const char *HOME;
 
 struct timeval initial;
 
@@ -187,25 +186,11 @@ static void Parse_malleability (char *filename)
 	int LOCAL_nhclasses;
 	
 	// Initialization of the existing compute nodes
-	LOCAL_nhclasses=8;
-	strcpy(LOCAL_hclasses[0],"compute-11-1");
-	strcpy(LOCAL_hclasses[1],"compute-11-2");
-	strcpy(LOCAL_hclasses[2],"compute-11-3");
-	strcpy(LOCAL_hclasses[3],"compute-11-4");
-	strcpy(LOCAL_hclasses[4],"compute-11-5");
-	strcpy(LOCAL_hclasses[5],"compute-11-6");
-	strcpy(LOCAL_hclasses[6],"compute-11-7");
-	strcpy(LOCAL_hclasses[7],"compute-11-8");
+	LOCAL_nhclasses=1;
+	strcpy(LOCAL_hclasses[0],"localhost");
 
 	// Initialization of the existing compute nodes
-	strcpy(LOCAL_rclasses[0],"c111");
-	strcpy(LOCAL_rclasses[1],"c112");
-	strcpy(LOCAL_rclasses[2],"c113");
-	strcpy(LOCAL_rclasses[3],"c114"); 
-	strcpy(LOCAL_rclasses[4],"c115");
-	strcpy(LOCAL_rclasses[5],"c116");
-	strcpy(LOCAL_rclasses[6],"c117");
-	strcpy(LOCAL_rclasses[7],"c118");
+	strcpy(LOCAL_rclasses[0],"lhost");
 	
 	memset(output, 0, 2000);
 	
@@ -324,7 +309,7 @@ static void Parse_malleability (char *filename)
         if (appclass==4) sprintf(line,"./Lanza_com %d %d %d %d\n",nprocs,port1,port2,nfile+1);
         if (appclass==5) sprintf(line," %s/FlexMPI/examples/examples2/source/benchmarks/write/vpicio/vpicio_uni/Lanza_IO %d %d %d %d\n",HOME,nprocs,port1,port2,nfile+1);
 		if (appclass==6) sprintf(line,"./Lanza_clarisse %d %d %d %d\n",nprocs,port1,port2,nfile+1);
-		if (appclass==7) sprintf(line,"./Lanza_Jacobi_IO.sh %d %d %d %d\n",nprocs,port1,port2,nfile+1);
+		if (appclass==7) sprintf(line,"./Execute2.sh %d %d %d %d\n",nprocs,port1,port2,nfile+1);
 		port1+=2;
 		port2+=2;
 		
@@ -478,7 +463,12 @@ int main (int argc, char** argv)
 
 	
 	printf("\n \n --- Initializing\n");
-	
+
+	// Home capture
+	const char *name = "HOME";
+	HOME=getenv(name);
+
+
 	// Captures ctrl+c signal and exists killing all the apps
 	signal(SIGINT, intHandler);
 

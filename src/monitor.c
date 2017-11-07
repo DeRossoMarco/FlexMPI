@@ -1137,7 +1137,7 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
             }
 
 			// David
-			if (*rank == EMPI_root) printf ("Iter: %d \t FLOPS: %lld \t SMFLOS:: %lf \t RTIME:: %lf \t CTIME:: %lf \t IOTime:: %lf \t Size: %i\n", iter, smonitor[0].flops, (double)((double)smonitor[0].flops)/((double)smonitor[0].rtime), ((double)smonitor[0].rtime)/1000000, smonitor[0].ctime, smonitor[0].iotime, *size);
+			if (*rank == EMPI_root) printf ("Iter: %d \t FLOPs: %lld \t MFLOPS:: %lf \t RTIME:: %lf \t CTIME:: %lf \t IOTime:: %lf \t Size: %i\n", iter, smonitor[0].flops, (double)((double)smonitor[0].flops)/((double)smonitor[0].rtime), ((double)smonitor[0].rtime)/1000000, smonitor[0].ctime, smonitor[0].iotime, *size);
 
             //reset variables
             EMPI_GLOBAL_PAPI_rtime = EMPI_GLOBAL_PAPI_ptime = EMPI_GLOBAL_PAPI_flops = EMPI_GLOBAL_PAPI_hwpc_1 = EMPI_GLOBAL_PAPI_hwpc_2 = 0;

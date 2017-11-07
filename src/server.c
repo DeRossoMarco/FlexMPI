@@ -88,7 +88,7 @@ int service_poster(void* args)
     struct addrinfo* res=0;
 
 	sprintf(line,"%d",EMPI_GLOBAL_sendport);
-    int err=getaddrinfo("tucan",line,&hints,&res);
+    int err=getaddrinfo("localhost",line,&hints,&res);
 	int active=1,termination=0;
 	
     if (err<0) {
@@ -191,7 +191,8 @@ int command_listener(void)
         printf("Received packet from %s:%d   Data: %s\n\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port), buf);
 
         //truncate message
-        char bufer_cropped [length];
+        char bufer_cropped [length+2];
+	memset(bufer_cropped, 0, length+2);
         strncpy(bufer_cropped, buf, length);
 		strcat(bufer_cropped, "\0"); // David: add termination string
         //Parse string
