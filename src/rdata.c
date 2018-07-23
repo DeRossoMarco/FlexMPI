@@ -812,7 +812,8 @@ void EMPI_Register_dense (char *id, void *addr, MPI_Datatype datatype, int size,
 	data->datatype = datatype;
 	data->size = size;
 	data->dim = size;
-	data->nnz = (size * size);
+	data->nnz = ((unsigned long long int)size) * ((unsigned long long int)size);
+	//data->nnz = size*size;
 	data->stype = EMPI_DENSE;
 	data->mapping = mapping;
 

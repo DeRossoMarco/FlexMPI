@@ -18,8 +18,8 @@
 * See COPYRIGHT.txt for copyright notices and details.
 */
 
+
 /****************************************************************************************************************************************
-****************************************************************************************************************************************
 *
 *	Jacobi iterative method
 *
@@ -29,7 +29,6 @@
 #include <empi.h>
 #include <math.h>
 #include "papi.h"
-//#include "util.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -39,25 +38,36 @@
 #include <errno.h>
 #include "error.h"
 
-// Delete: for compatibility with FlexMPI I/O
 
+// Delete: for compatibility with FlexMPI I/O
 MPI_File fh;
 
 //function prototype
 
-void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, double *x_old, int it, int itmax, double diff_limit, int cpu_i, int com_i, int io_i, char *argv[]);
+void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, double *x_old, int it, int itmax, double diff_limit, int cpu_i, int com_i, int io_i, int appd_id, char *argv[]);
 void load_matrix (int dim, int despl, int count, double *A, double *b);
 void generate_matrix (int dim, int count, double *A, double *b);
-int FLEXMPI_File_write_all(MPI_File fh, void *buf, int count, MPI_Datatype datatype, MPI_Status *status);
+
+double energy1 = 0;
+double energy2 = 0;
+double power1 = 0;
+double power2 = 0;
 
 double tcomm_r = 0, tcomp_r = 0;
 
+
+
+void diep(char *s)
+{
+  perror(s);
+  exit(1);
+}
 
 //main
 int main (int argc, char *argv[])
 {
 	int dim, rank, size, itmax, type, despl, count, it = 0;
-	int cpu_i,com_i,io_i;
+	int cpu_i,com_i,io_i,app_id;
 
 	double *A = NULL, *b = NULL, *x = NULL, *x_old = NULL, comp_ini, comp_fin, ldata_ini, ldata_fin;
 
@@ -65,24 +75,12 @@ int main (int argc, char *argv[])
 
 	char mpi_name[128];
 
-	int len,err,provided;
+	int len;
 
+    
 
-	//MPI init
-	err = PMPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-   	if (err == MPI_ERR_OTHER) return MPI_ERR_OTHER;
-	if(provided!=MPI_THREAD_MULTIPLE){
-	  	fprintf(stderr,"Error in MPI_Init routine: MPI_THREAD_MULTIPLE is not supported \n");
-	  	exit(1);		
-	}
-	
-	// FLEXMPI init
-	FLEXMPI_Init (&argc, &argv);
-	
-	//client_global_state.intracomm = EMPI_COMM_WORLD;
-
-	
-	//test2();
+	// MPI init
+	MPI_Init (&argc, &argv);
 	
 	//Get rank & size
 
@@ -90,9 +88,11 @@ int main (int argc, char *argv[])
 	MPI_Comm_size (EMPI_COMM_WORLD, &size);
 	MPI_Get_processor_name (mpi_name, &len);
 
-	if (argc < 7) {
 
-		printf ("Jacobi usage: ./jacobi <dim> <itmax> <diff_tol> <cpu_intensity> <com_intensity> <IO_intensity>\n");
+    
+	if (argc < 8) {
+
+        printf ("Jacobi usage: ./jacobi <dim> <itmax> <diff_tol> <cpu_intensity> <com_intensity> <IO_intensity> <nping_server_name>\n");
 		MPI_Abort (MPI_COMM_WORLD,1);
 	}
 
@@ -111,10 +111,15 @@ int main (int argc, char *argv[])
 	
 	//get communication intensity
 	com_i = atoi(argv[5]);
-	if(com_i<1) com_i=1;
+	//if(com_i<1) com_i=1;
 
 	//get IO intensity
 	io_i = atoi(argv[6]);
+
+	//application id
+	app_id = atoi(argv[7]);
+
+	// argv[8] is the nping server name -> Used in Jacobi function
 
 	b = (double*) calloc (dim, sizeof (double));
 	x = (double*) calloc (dim, sizeof (double));
@@ -138,13 +143,13 @@ int main (int argc, char *argv[])
 
 		ldata_ini = MPI_Wtime ();
 
-		//  matrix setup
+		//load matrix
 		//load_matrix (dim, despl, count, A, b);
 		generate_matrix (dim, count, A, b);
 		
 		ldata_fin = MPI_Wtime ();
 
-		printf ("[%i] \t Process spawned in \t %s | Data loaded in %lf secs.\n", rank, mpi_name, ldata_fin-ldata_ini);
+		printf ("[%i] Process spawned in %s | Data loaded in %lf secs.\n", rank, mpi_name, ldata_fin-ldata_ini);
 
 		MPI_Barrier (EMPI_COMM_WORLD);
 
@@ -157,52 +162,59 @@ int main (int argc, char *argv[])
 
 		ldata_fin = MPI_Wtime ();
 
-		printf (" [%i] \t Process spawned in \t %s at %i | Data received in %lf secs.\n", rank, mpi_name, it, ldata_fin-ldata_ini);
+		printf (" [%i] Process spawned in %s at %i | Data received in %lf secs.\n", rank, mpi_name, it, ldata_fin-ldata_ini);
 	}
 
 
 
 	comp_ini = MPI_Wtime ();
 
-	if(rank==0) printf(" [%d] \t Configuration: \t dim: %d \t itmax: %d \t diff_tol: %f \t cpu_intensity: %d  \t com_intensity: %d \t IO_intensity: %d \n\n",rank,dim,itmax,diff_tol,cpu_i,com_i,io_i);
+	printf (" [%d] Jacobi started \n", rank);
+	if(rank==0) printf(" [%d] Configuration: \t nprocs: %d \t dim: %d \t itmax: %d \t diff_tol: %f \t cpu_intensity: %d  \t com_intensity: %d \t IO_intensity: %d \n\n",rank,size,dim,itmax,diff_tol,cpu_i,com_i,io_i);
 
 	//jacobi
-	jacobi (dim, &rank, &size, A, b, x, x_old, it, itmax, diff_tol, cpu_i, com_i, io_i, argv);
+	jacobi (dim, &rank, &size, A, b, x, x_old, it, itmax, diff_tol, cpu_i, com_i, io_i, app_id, argv);
 
 	comp_fin = MPI_Wtime ();
 
-	if (rank == 0) printf (" [%i] \t Jacobi finished in %lf seconds - cost %f\n", rank, comp_fin-comp_ini, EMPI_GLOBAL_cum_cost);
+	if (rank == 0) printf (" [%i] Jacobi finished in %lf seconds - cost %f\n", rank, comp_fin-comp_ini, EMPI_GLOBAL_cum_cost);
 
-	//FLEXMPI finalize
-	FLEXMPI_Finalize();
 	
-	//Finalize MPI environment
-	PMPI_Finalize();
-
 	//free
 	EMPI_free (A, "matrix");
 	free (b);
 	free (x);
 	EMPI_free (x_old, "x_old");
 
-	return 0;
+
+
+	if (rank == 0) printf (" Terminating MPI \n");	
+	//FLEXMPI finalize
+	MPI_Finalize();
+
+
+	exit(1);
 }
 
 //parallel jacobi
-void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, double *x_old, int it, int itmax, double diff_limit, int cpu_i, int com_i, int io_i, char *argv[])
+void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, double *x_old, int it, int itmax, double diff_limit, int cpu_i, int com_i, int io_i, int app_id, char *argv[])
 {
 	double tcomm = 0, tcomp = 0;
-
+	
 	double diff = 0, axi = 0, *x_new = NULL;
-	double t1,t2;
+	double t1,t2,cnt_io0=0,cnt_io1=0;
 	int i,n, m, k, desp, count, status, *displs = NULL, *vcounts = NULL, type;
 	
 	char bin[1024],npingcmd[1024]; 
 	sprintf(bin,"%s",argv[0]);
 	
+    char file[200];
+	
+	sprintf(file,"datafileN1_%d.out",app_id);
 
+		
 	EMPI_Get_type (&type);
-
+	
 	//malloc vcounts and displs array
 	displs = (int*) malloc (*size * sizeof(int));
 	vcounts = (int*) malloc (*size * sizeof(int));
@@ -211,13 +223,13 @@ void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, dou
 
 	//get worksize
 	EMPI_Get_wsize (*rank, *size, dim, &desp, &count, vcounts, displs);
-
+	
 	t1=MPI_Wtime();
 	for (; it < itmax; it ++) {
-
+		
 		//monitor init
 		EMPI_Monitor_init ();
-
+        
 		for(k=0;k<cpu_i;k++){
 			//matrix rows
 			for (n = 0; n < count; n ++) {
@@ -233,6 +245,7 @@ void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, dou
 				x[n+desp] = (( b[n+desp] - axi ) / A[(n*dim)+(n+desp)]);
 			}
 		}
+		
 		//Allgather x vector
 		for(i=0;i<com_i;i++) 	MPI_Allgatherv (x+desp, count, MPI_DOUBLE, x_new, vcounts, displs, MPI_DOUBLE, EMPI_COMM_WORLD);
 
@@ -241,9 +254,7 @@ void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, dou
 		//memory copy
 		memcpy (x_old, x_new, (dim*sizeof(double)));
 
-
-		if (diff <= diff_limit) break;
-	
+       
 		//monitor end
 		EMPI_Monitor_end (rank, size, it, itmax, &count, &desp, &vcounts, &displs, NULL, argv+1, bin);
 
@@ -259,7 +270,7 @@ void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, dou
 		
 	}
 
-	t2=MPI_Wtime();
+	t2=MPI_Wtime(); 
 
 	//get aggregated tcomp
 	EMPI_Get_aggregated_tcomp (&tcomp);
@@ -268,12 +279,13 @@ void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, dou
 	tcomm_r = tcomm;
 	
 	printf ("[%i] Jacobi finished in %i iterations, %f diff value - tcomp %lf tcomm %lf - overhead %lf lbalance %lf rdata %lf processes %lf reconfiguring %lf other %lf\n", *rank, it,diff, tcomp, tcomm, EMPI_GLOBAL_tover, EMPI_GLOBAL_overhead_lbalance, EMPI_GLOBAL_overhead_rdata, EMPI_GLOBAL_overhead_processes, EMPI_GLOBAL_overhead_rpolicy, (EMPI_GLOBAL_tover - EMPI_GLOBAL_overhead_lbalance - EMPI_GLOBAL_overhead_processes - EMPI_GLOBAL_overhead_rdata - EMPI_GLOBAL_overhead_rpolicy));
-	printf("\n [%i] Total execution time: %f",*rank,t2-t1);
+	printf("\n [%i] Total execution time: %f \t io1 %f \t io2 %f \n",*rank,t2-t1,cnt_io0,cnt_io1);
 	
 	if(*rank==0){
-		sprintf(npingcmd,"nping --udp -g %d -p %d  -c 1 tucan --data-string \"Aplication terminated\">/dev/null",EMPI_GLOBAL_recvport+200,EMPI_GLOBAL_sendport);
+		sprintf(npingcmd,"nping --udp -g %d -p %d  -c 1 %s --data-string \"Aplication terminated\">/dev/null",EMPI_GLOBAL_recvport+200,EMPI_GLOBAL_sendport,argv[8]);
 		system(npingcmd);
 	}
+	sleep(5);
 
 	free (displs);
 	free (vcounts);
@@ -294,16 +306,17 @@ void load_matrix (int dim, int despl, int count, double *A, double *b) {
 
 		fseek (flDense, (despl * dim * (size_double + size_char)), SEEK_SET);
 
-	for (n = 0; n < count; n ++)
+	for (n = 0; n < count; n ++){
 	
-        for (m = 0; m < dim; m ++)
+        for (m = 0; m < dim; m ++){
 		
 			err = fscanf (flDense, "%lf\n", &A[(n*dim)+m]);
 			if(err == EOF){
 				perror("Error fscanf\n");
 			}
-
+        }
 		fclose (flDense);
+    }
 }
 
 
@@ -318,7 +331,8 @@ void generate_matrix (int dim, int count, double *A, double *b) {
 	
         for (m = 0; m < dim; m ++){
 		
-			A[(n*dim)+m]= 30-60*(rand() / RAND_MAX ) ;  
+			//A[(n*dim)+m]= 30-60*(rand() / RAND_MAX ) ;  
+			A[(n*dim)+m]=(double)((n*dim)+m);
 		}
 	}
 }

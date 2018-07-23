@@ -115,9 +115,9 @@ void EMPI_Set_lbpolicy (int lbpolicy) {
 		fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Set_lbpolicy in <%s> ***\n", __FILE__);
 	#endif
 
-	if ((lbpolicy != EMPI_LBMFLOPS)&&(lbpolicy != EMPI_LBCOUNTS)) {
+	if ((lbpolicy != EMPI_LBMFLOPS)&&(lbpolicy != EMPI_LBCOUNTS)&&(lbpolicy != EMPI_LBSTATIC)) {
 
-		fprintf (stderr, "Invalid load balancing policy (set to EMPI_LBMFLOPS or EMPI_LBCOUNTS)\n");
+		fprintf (stderr, "Invalid load balancing policy (set to EMPI_LBMFLOPS, EMPI_LBCOUNTS or EMPI_LBSTATIC)\n");
 
 		MPI_Abort (EMPI_COMM_WORLD, -1);
 	}
@@ -395,14 +395,19 @@ static void EMPI_LBalance_spawn_dense (int rank, int size, int newsize, int* new
 	assert (rp);
 
 	//set gcount, rp and srp
-	for (n = 0; n < newsize; n ++) {
+    for (n = 0; n < newsize; n ++) {
 
-		//get mflops
-		rp[n] = stflops[n];
-
-		srp += rp[n];
-	}
-
+        //get mflops
+        if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC){         
+            rp[n] = 1;         
+        }     
+        else{         
+            rp[n] = stflops[n];         
+        }
+        srp += rp[n];
+    }
+  
+    
 	//set global count
 	gcount = EMPI_GLOBAL_Data->size;
 
@@ -415,9 +420,16 @@ static void EMPI_LBalance_spawn_dense (int rank, int size, int newsize, int* new
 
 		if (n > 0) displs[n] = displs[n-1] + vcounts[n-1];
 	}
-
-	if (psum < gcount) vcounts[newsize-1] += (gcount-psum);
-
+    // Assign the remaider elements
+    n = 0;
+	while (psum < gcount)
+    {
+        vcounts[n] += 1;
+        psum++;
+        n++;
+        if(n == newsize) n = 0;
+    }
+    
 	//set rcount and rdispl
 	*newcount = vcounts[rank];
 	*newdispl = displs[rank];
@@ -461,16 +473,20 @@ static void EMPI_LBalance_spawn_sparse (int rank, int size, int newsize, int* ne
 	assert (rp);
 
 	//set rp and srp
-	for (n = 0; n < newsize; n ++) {
+    for (n = 0; n < newsize; n ++) {
 
-		//get mflops
-		rp[n] = stflops[n];
+        //get mflops
+        if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+            rp[n] = 1;
+        }
+        else{
+            rp[n] = stflops[n]; 
+        }
 
-		if (n < size) gcount += smonitor[n].count;
+        if (n < size) gcount += smonitor[n].count;
 
-		srp += rp[n];
-	}
-
+        srp += rp[n];
+    }
 	//memory allocation
 	tvcounts = (int*) calloc (size, sizeof (int));
 	assert (tvcounts);
@@ -518,8 +534,16 @@ static void EMPI_LBalance_spawn_sparse (int rank, int size, int newsize, int* ne
 		if (n > 0) displs[n] = displs[n-1] + vcounts[n-1];
 	}
 
-	if (psum < EMPI_GLOBAL_Data->size) vcounts[newsize-1] += (EMPI_GLOBAL_Data->size-psum);
-
+    // Assign the remaider elements
+    n = 0;
+	while (psum < EMPI_GLOBAL_Data->size)
+    {
+        vcounts[n] += 1;
+        psum++;
+        n++;
+        if(n == newsize) n = 0;
+    }
+    
 	//set rcount and rdispl
 	*newcount = vcounts[rank];
 	*newdispl = displs[rank];
@@ -560,7 +584,12 @@ static void EMPI_LBalance_spawn_fcost (int rank, int size, int newsize, int* new
 	for (n = 0; n < newsize; n ++) {
 
 		//get mflops
-		rp[n] = stflops[n];
+        if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+            rp[n] = 1;
+        }
+        else{
+            rp[n] = stflops[n];
+        }
 
 		srp += rp[n];
 	}
@@ -608,8 +637,17 @@ static void EMPI_LBalance_spawn_fcost (int rank, int size, int newsize, int* new
 		if (n > 0) displs[n] = displs[n-1] + vcounts[n-1];
 	}
 
-	if (psum < EMPI_GLOBAL_Data->size) vcounts[newsize-1] += (EMPI_GLOBAL_Data->size-psum);
+        // Assign the remaider elements
+    n = 0;
+	while (psum < EMPI_GLOBAL_Data->size)
+    {
+        vcounts[n] += 1;
+        psum++;
+        n++;
+        if(n == newsize) n = 0;
+    }
 
+    
 	//set rcount and rdispl
 	*newcount = vcounts[rank];
 	*newdispl = displs[rank];
@@ -713,13 +751,18 @@ static void EMPI_LBalance_remove_dense (int rank, int size, int newsize, int* ne
 
 		if (pfound == EMPI_FALSE) {
 
-			//get mflops
-			rp[n] = (int)(smonitor[n].flops/smonitor[n].rtime);
-
-			srp += rp[n];
-
+        	//set gcount, rp and srp
+            if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+                //get partition size
+                rp[n] = 1;
+            }
+            else{    
+                //get mflops     
+                rp[n] = (int)(smonitor[n].flops/smonitor[n].rtime);
+            }
+            srp += rp[n];
+            
 		} else if (pfound == EMPI_TRUE) {
-
 			//removed process
 			rp [n] = -1;
 		}
@@ -761,16 +804,17 @@ static void EMPI_LBalance_remove_dense (int rank, int size, int newsize, int* ne
 		}
 	}
 
-	if (psum < gcount) {
-
-		for (n = 0; n < size; n ++)
-
-			if (rp[n] > 0)
-
-				lastrank = n;
-
-		tvcounts[lastrank] += (gcount-psum);
-	}
+    // Assign the remaider elements
+    n = 0;
+	while (psum < gcount)
+    {
+        if(rp[n] > 0){
+            tvcounts[n] += 1;
+            psum++;
+        }
+        n++;
+        if(n == size) n = 0;
+   }
 
 	for (idx = 0, n = 0; n < size; n ++) {
 
@@ -842,8 +886,12 @@ static void EMPI_LBalance_remove_sparse (int rank, int size, int newsize, int* n
 		if (pfound == EMPI_FALSE) {
 
 			//get mflops
-			rp[n] = (int)(smonitor[n].flops/smonitor[n].rtime);
-
+            if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+                rp[n] = 1;
+            }
+            else{
+                rp[n] = (int)(smonitor[n].flops/smonitor[n].rtime);
+            }
 			srp += rp[n];
 
 		} else if (pfound == EMPI_TRUE) {
@@ -916,17 +964,18 @@ static void EMPI_LBalance_remove_sparse (int rank, int size, int newsize, int* n
 			tdispls[n] = -1;
 		}
 	}
-
-	if (psum < EMPI_GLOBAL_Data->size) {
-
-		for (n = 0; n < size; n ++)
-
-			if (rp[n] > 0)
-
-				lastrank = n;
-
-		tvcounts[lastrank] += (EMPI_GLOBAL_Data->size-psum);
-	}
+    
+    // Assign the remaider elements
+    n = 0;
+	while (psum < EMPI_GLOBAL_Data->size)
+    {
+        if(rp[n] > 0){
+            tvcounts[n] += 1;
+            psum++;
+        }
+        n++;
+        if(n == size) n = 0;
+    }
 
 	for (idx = 0, n = 0; n < size; n ++) {
 
@@ -991,9 +1040,14 @@ static void EMPI_LBalance_remove_fcost (int rank, int size, int newsize, int* ne
 
 		if (pfound == EMPI_FALSE) {
 
-			//get mflops
-			rp[n] = (int)(smonitor[n].flops/smonitor[n].rtime);
-
+			
+            if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+                rp[n] = 1;
+            }
+            else{  
+                //get mflops            
+                rp[n] = (int)(smonitor[n].flops/smonitor[n].rtime);
+            }
 			srp += rp[n];
 
 		} else if (pfound == EMPI_TRUE) {
@@ -1060,16 +1114,18 @@ static void EMPI_LBalance_remove_fcost (int rank, int size, int newsize, int* ne
 		}
 	}
 
-	if (psum < EMPI_GLOBAL_Data->size) {
-
-		for (n = 0; n < size; n ++)
-
-			if (rp[n] > 0)
-
-				lastrank = n;
-
-		tvcounts[lastrank] += (EMPI_GLOBAL_Data->size-psum);
-	}
+    
+    // Assign the remaider elements
+    n = 0;
+	while (psum < EMPI_GLOBAL_Data->size)
+    {
+        if(rp[n] > 0){
+            tvcounts[n] += 1;
+            psum++;
+        }
+        n++;
+        if(n == size) n = 0;
+    }
 
 	for (idx = 0, n = 0; n < size; n ++) {
 
@@ -1235,7 +1291,21 @@ static int EMPI_LBalance_dense (int *rank, int *size, int count, int disp, EMPI_
 	rp = (double*) calloc (*size, sizeof (double));
 	assert (rp);
 
-	if (BTtype == EMPI_TCPU) {
+    // Static policy: fixed block assignment
+    if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+
+		//set gcount, rp and srp
+		for (n = 0; n < *size; n ++) {
+
+			//get partition size
+			rp[n] = 1;
+
+			gcount += smonitor[n].count;
+
+			srp += rp[n];
+		}
+        
+    }   else if (BTtype == EMPI_TCPU) {
 
 		if (EMPI_GLOBAL_lbpolicy == EMPI_LBMFLOPS) {
 
@@ -1330,8 +1400,16 @@ static int EMPI_LBalance_dense (int *rank, int *size, int count, int disp, EMPI_
 		if (n > 0) displs[n] = displs[n-1] + vcounts[n-1];
 	}
 
-	if (psum < gcount) vcounts[*size-1] += (gcount-psum);
-
+     // Assign the remaider elements
+    n = 0;
+	while (psum < gcount)
+    {
+        vcounts[n] += 1;
+        psum++;
+        n++;
+        if(n == *size) n = 0;
+    }
+    
 	//free memory
 	free (rp);
 
@@ -1413,7 +1491,21 @@ static int EMPI_LBalance_sparse (int *rank, int *size, int count, int disp, EMPI
 	rp = (double*) calloc (*size, sizeof (double));
 	assert (rp);
 
-	if (BTtype == EMPI_TCPU) {
+	// Static policy: fixed block assignment
+    if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+
+		//set gcount, rp and srp
+		for (n = 0; n < *size; n ++) {
+
+			//get partition size
+			rp[n] = 1;
+
+			gcount += smonitor[n].count;
+
+			srp += rp[n];
+		}
+        
+    }   else if (BTtype == EMPI_TCPU) {
 
 		if (EMPI_GLOBAL_lbpolicy == EMPI_LBMFLOPS) {
 
@@ -1538,8 +1630,16 @@ static int EMPI_LBalance_sparse (int *rank, int *size, int count, int disp, EMPI
 		if (n > 0) displs[n] = displs[n-1] + vcounts[n-1];
 	}
 
-	if (psum < EMPI_GLOBAL_Data->size) vcounts[*size-1] += (EMPI_GLOBAL_Data->size-psum);
-
+    // Assign the remaider elements
+    n = 0;
+	while (psum < EMPI_GLOBAL_Data->size)
+    {
+        vcounts[n] += 1;
+        psum++;
+        n++;
+        if(n == *size) n = 0;
+    }
+    
 	//free memory
 	free (nnzrecv);
 	free (rp);
@@ -1615,7 +1715,19 @@ static int EMPI_LBalance_fcost (int *rank, int *size, int count, int disp, int *
 	rp = (double*) calloc (*size, sizeof (double));
 	assert (rp);
 
-	if (BTtype == EMPI_TCPU) {
+	// Static policy: fixed block assignment
+    if (EMPI_GLOBAL_lbpolicy == EMPI_LBSTATIC) {
+
+		//set gcount, rp and srp
+		for (n = 0; n < *size; n ++) {
+
+			//get partition size
+			rp[n] = 1;
+
+			srp += rp[n];
+		}
+        
+    }   else if (BTtype == EMPI_TCPU) {
 
 		if (EMPI_GLOBAL_lbpolicy == EMPI_LBMFLOPS) {
 
@@ -1726,8 +1838,16 @@ static int EMPI_LBalance_fcost (int *rank, int *size, int count, int disp, int *
 		if (n > 0) displs[n] = displs[n-1] + vcounts[n-1];
 	}
 
-	if (psum < EMPI_GLOBAL_Data->size) vcounts[*size-1] += (EMPI_GLOBAL_Data->size-psum);
-
+    // Assign the remaider elements
+    n = 0;
+	while (psum < EMPI_GLOBAL_Data->size)
+    {
+        vcounts[n] += 1;
+        psum++;
+        n++;
+        if(n == *size) n = 0;
+    }
+    
 	//free memory
 	free (fcrecv);
 	free (rp);

@@ -70,6 +70,7 @@ static const int EMPI_NATIVE			= 941490;
 
 static const int EMPI_LBMFLOPS			= 854392;
 static const int EMPI_LBCOUNTS			= 829010;
+static const int EMPI_LBSTATIC			= 829099;
 
 static const int EMPI_ROWS				= 748838;
 static const int EMPI_NNZ	 			= 782891;
@@ -93,7 +94,7 @@ static const int EMPI_TCPU				= 877789;
 static const int EMPI_ADAPTABILITY_EX	= 743289;
 static const int EMPI_ADAPTABILITY_LP	= 718291;
 // Communication variables
-static const int EMPI_COMMBUFFSIZE		= 512;
+static const int EMPI_COMMBUFFSIZE		= 2048;
 static const int EMPI_COMMNPACK			= 10;
 static const int EMPI_COMMNUMOPTIONS 	= 10;
 
@@ -138,9 +139,13 @@ int EMPI_GLOBAL_hostid; //host id where the process is being executed
 
 int EMPI_GLOBAL_nhclasses; //number of host classes
 
-char EMPI_GLOBAL_hclasses[10][128]; //host classes
+char EMPI_GLOBAL_hclasses[100][128]; //host classes
+
+char EMPI_GLOBAL_controller[512]; // external server name
 
 int EMPI_GLOBAL_lbalance_disabled;
+
+int EMPI_GLOBAL_perform_load_balance;
 
 //Malleability
 int EMPI_GLOBAL_nextrm;
@@ -223,10 +228,12 @@ long long EMPI_GLOBAL_PAPI_hwpc_2;
 char EMPI_GLOBAL_PAPI_nhwpc_1[EMPI_Monitor_string_size];
 char EMPI_GLOBAL_PAPI_nhwpc_2[EMPI_Monitor_string_size];
 
-
 int EMPI_GLOBAL_PAPI_eventSet;
 
 int EMPI_GLOBAL_corebinding;
+
+int EMPI_GLOBAL_delayio;
+double EMPI_GLOBAL_delayiotime;
 
 long long EMPI_GLOBAL_PAPI_rtime_lb;
 long long EMPI_GLOBAL_PAPI_ptime_lb;
@@ -237,8 +244,10 @@ double EMPI_GLOBAL_tcomm_interval_lb;
 
 double EMPI_GLOBAL_overhead_rpolicy;
 double EMPI_GLOBAL_overhead_lbalance;
-double EMPI_GLOBAL_overhead_processes;
-double EMPI_GLOBAL_overhead_rdata;
+double EMPI_GLOBAL_overhead_processes; 		// accumulated overhead of process creation/destruction
+double EMPI_GLOBAL_lastoverhead_processes;  // last overhead of the last operation of process creation/destruction
+double EMPI_GLOBAL_overhead_rdata; 			// accumulated overhead of data redistribution
+double EMPI_GLOBAL_lastoverhead_rdata; 		// last overhead of data redistribution
 double EMPI_GLOBAL_overhead_aux;
 
 long long *EMPI_GLOBAL_track_flops;
@@ -306,8 +315,6 @@ EMPI_Class_type* EMPI_GLOBAL_system_classes;
 char EMPI_GLOBAL_host_name[MPI_MAX_PROCESSOR_NAME];
 
 EMPI_Spawn_data EMPI_GLOBAL_spawn_data;
-
-int EMPI_GLOBAL_perform_load_balance;
 
 EMPI_Monitor_type EMPI_GLOBAL_monitoring_data;
 

@@ -81,6 +81,7 @@ typedef struct EMPI_Monitor_type {
 	char		nhwpc_2[EMPI_Monitor_string_size];
 	int 		corebinding;
 	int 		termination; // Used to flag the program termination
+	int 		lbalance; // Used to flag the program termination
 	double 		iotime;
 } EMPI_Monitor_type;
 

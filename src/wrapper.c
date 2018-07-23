@@ -34,22 +34,110 @@
 *	'MPI_File_write_all'
 *
 ****************************************************************************************************************************************/
-int FLEXMPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
+int FLEXMPI_File_write_dummy(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
                        MPI_Status *status) MPICH_ATTR_POINTER_WITH_TYPE_TAG(2,4) {
-	int err;
+	int err,rank;
+	double iot2,iot1,local_delayiotime;
+	int local_delayio,termination;
+	
+	MPI_Comm_rank(EMPI_COMM_WORLD,&rank);
 	
 	//capture io
 	//if (EMPI_GLOBAL_capture_comms) EMPI_Capture_comms (MPI_ALLGATHER, &sendcount, sendtype);
-
+	if(rank==0){
+		pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+		local_delayiotime=EMPI_GLOBAL_delayiotime;
+		local_delayio=EMPI_GLOBAL_delayio;
+		termination=EMPI_GLOBAL_monitoring_data.termination;
+        pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+				
+		// Detects whether there is I/O delay (only root proc)
+		if(local_delayio==1 && local_delayiotime>0 && termination==0){		
+			iot1=MPI_Wtime();
+			iot2=MPI_Wtime();
+			while((iot2-iot1)<local_delayiotime) iot2=MPI_Wtime(); // Delay only applied to the root process		
+		}
+		
+		while(local_delayio==1 && local_delayiotime==-1  && termination==0){
+			sleep(1);
+			pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+			local_delayiotime=EMPI_GLOBAL_delayiotime;
+			local_delayio=EMPI_GLOBAL_delayio;
+            termination=EMPI_GLOBAL_monitoring_data.termination;
+			pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+		}		
+		
+		pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+		EMPI_GLOBAL_delayiotime=0;
+		EMPI_GLOBAL_delayio=0;
+		pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+	}
+				
 	EMPI_GLOBAL_tio_ini = MPI_Wtime();
-
-	//MPI call
-	err =  PMPI_File_write_all(fh, buf, count, datatype, status);
+	
+	err=1;
 
 	EMPI_GLOBAL_tio_fin = MPI_Wtime();
 
 	EMPI_GLOBAL_tio += (EMPI_GLOBAL_tio_fin - EMPI_GLOBAL_tio_ini);
+		
+	return err;
+}
 
+/****************************************************************************************************************************************
+*
+*	'MPI_File_write_all'
+*
+****************************************************************************************************************************************/
+int FLEXMPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
+                       MPI_Status *status) MPICH_ATTR_POINTER_WITH_TYPE_TAG(2,4) {
+	int err,rank;
+	double iot2,iot1,local_delayiotime;
+	int local_delayio,termination;
+	
+	MPI_Comm_rank(EMPI_COMM_WORLD,&rank);
+
+	//capture io
+	//if (EMPI_GLOBAL_capture_comms) EMPI_Capture_comms (MPI_ALLGATHER, &sendcount, sendtype);
+	if(rank==0){
+		pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+		local_delayiotime=EMPI_GLOBAL_delayiotime;
+		local_delayio=EMPI_GLOBAL_delayio;
+		termination=EMPI_GLOBAL_monitoring_data.termination;
+        pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+				
+		// Detects whether there is I/O delay (only root proc)
+		if(local_delayio==1 && local_delayiotime>0 && termination==0){		
+			iot1=MPI_Wtime();
+			iot2=MPI_Wtime();
+			while((iot2-iot1)<local_delayiotime) iot2=MPI_Wtime(); // Delay only applied to the root process		
+		}
+		
+		while(local_delayio==1 && local_delayiotime==-1 && termination==0){
+			sleep(1);
+			pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+			local_delayiotime=EMPI_GLOBAL_delayiotime;
+			local_delayio=EMPI_GLOBAL_delayio;
+			termination=EMPI_GLOBAL_monitoring_data.termination;
+            pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+		}		
+		
+		pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+		EMPI_GLOBAL_delayiotime=0;
+		EMPI_GLOBAL_delayio=0;
+		pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+	}
+
+    EMPI_GLOBAL_tio_ini = MPI_Wtime();
+
+	//MPI call
+	err =  PMPI_File_write_all(fh, buf, count, datatype, status);
+	
+
+	EMPI_GLOBAL_tio_fin = MPI_Wtime();
+
+	EMPI_GLOBAL_tio += (EMPI_GLOBAL_tio_fin - EMPI_GLOBAL_tio_ini);
+		
 	return err;
 }
 

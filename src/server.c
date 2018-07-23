@@ -77,7 +77,9 @@ int service_poster(void* args)
 {
 	char line[1024];
 	char * buf     = calloc(EMPI_COMMBUFFSIZE, 1);
-	int index,length,size;
+	int index,length,size,resul=1;
+	char hostname[1024];
+	int hostnamelen;
 		
 	struct addrinfo hints;
     memset(&hints,0,sizeof(hints));
@@ -86,9 +88,29 @@ int service_poster(void* args)
     hints.ai_protocol=0;
     hints.ai_flags=AI_ADDRCONFIG;
     struct addrinfo* res=0;
+	
+	// Get rank0 node name
+	 MPI_Get_processor_name(hostname,&hostnamelen);
+	 
+	pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+	if(strlen(EMPI_GLOBAL_controller)<4) resul=1; // Different from NULL
+	else resul=strncmp(EMPI_GLOBAL_controller,"NULL",4);
+	
+	pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+	
+	if(resul==0){
+		printf("\n Name of the external controller not provided. Monitoring thread exiting.... \n \n");
+		pthread_exit(&EMPI_GLOBAL_posteractive);
+	}
+	else
+	{
+		printf("\n Establishing connection with controller in %s \n \n",EMPI_GLOBAL_controller);
+	}
 
+	pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 	sprintf(line,"%d",EMPI_GLOBAL_sendport);
-    int err=getaddrinfo("tucan",line,&hints,&res);
+    int err=getaddrinfo(EMPI_GLOBAL_controller,line,&hints,&res);
+	pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 	int active=1,termination=0;
 	
     if (err<0) {
@@ -118,9 +140,8 @@ int service_poster(void* args)
 				char line_aux[128];
 				pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 				MPI_Comm_size(EMPI_COMM_WORLD,&size);
-				if(EMPI_GLOBAL_monitoring_data.rtime!=0) sprintf(line, " [%s] rtime %lld\t ptime %lld\t ctime %f\t Mflops %lld\t %s %lld\t %s %lld Ratio=%f\t iotime %f size %d \n", hostlist->hostname, EMPI_GLOBAL_monitoring_data.rtime, EMPI_GLOBAL_monitoring_data.ptime, EMPI_GLOBAL_monitoring_data.ctime,(long long int)(EMPI_GLOBAL_monitoring_data.flops/EMPI_GLOBAL_monitoring_data.rtime),EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,((double)EMPI_GLOBAL_monitoring_data.hwpc_2)/((double)EMPI_GLOBAL_monitoring_data.hwpc_1),EMPI_GLOBAL_monitoring_data.iotime,size);	
-				
-				else sprintf(line, " [%s] rtime %lld\t ptime %lld\t ctime %f\t Mflops %d\t %s %lld\t %s %lld Ratio=%f\t iotime %f size %d\n", hostlist->hostname, EMPI_GLOBAL_monitoring_data.rtime, EMPI_GLOBAL_monitoring_data.ptime, EMPI_GLOBAL_monitoring_data.ctime,1,EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,((double)EMPI_GLOBAL_monitoring_data.hwpc_2)/((double)EMPI_GLOBAL_monitoring_data.hwpc_1),EMPI_GLOBAL_monitoring_data.iotime,size);	
+				if(EMPI_GLOBAL_monitoring_data.rtime!=0) sprintf(line, "FLX [%s] rtime %.2f\t ptime %.2f\t ctime %.4f\t Mflops %lld\t %s\t %lld\t %s\t %lld\t iotime %.4f\t size %d \n", hostname, (double)EMPI_GLOBAL_monitoring_data.rtime/1000000, (double)EMPI_GLOBAL_monitoring_data.ptime/1000000, EMPI_GLOBAL_monitoring_data.ctime,(long long int)(EMPI_GLOBAL_monitoring_data.flops/EMPI_GLOBAL_monitoring_data.rtime),EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,EMPI_GLOBAL_monitoring_data.iotime,size);	
+				else sprintf(line, "FLX [%s] rtime %.2f\t ptime %.2f\t ctime %.4f\t Mflops %lld\t %s\t %lld\t %s\t %lld\t iotime %.4f\t size %d \n", hostname, (double)EMPI_GLOBAL_monitoring_data.rtime/1000000, (double)EMPI_GLOBAL_monitoring_data.ptime/1000000, EMPI_GLOBAL_monitoring_data.ctime,(long long int)1,EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,EMPI_GLOBAL_monitoring_data.iotime,size);	
 			
 				pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 				hostlist=hostlist->next;
@@ -146,9 +167,9 @@ int service_poster(void* args)
         {
             diep("sendto()");
         }
-        printf("Sent as response:\n%s \n", buf);
+        printf("Sent as response: %s \n", buf);
 
-        if (termination==0) sleep(5);
+        if (termination==0) sleep((int)floor((double)EMPI_GLOBAL_monitoring_data.ptime/1000000)+5);
     }
 	pthread_exit(&EMPI_GLOBAL_posteractive);
 }
@@ -159,6 +180,7 @@ int command_listener(void)
     struct sockaddr_in si_other;
     int i, n, s, slen = sizeof(si_other);
 	size_t len0,len1;
+	int option=1;
 
     //int buffer_length = sizeof(int);
     char * buf     = calloc(EMPI_COMMBUFFSIZE, 1);
@@ -168,6 +190,9 @@ int command_listener(void)
     {
         diep("socket");
     }
+	
+	// Reuse socket
+	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
     memset((char *) &si_me, 0, sizeof(si_me));
     si_me.sin_family = AF_INET;
@@ -191,7 +216,8 @@ int command_listener(void)
         printf("Received packet from %s:%d   Data: %s\n\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port), buf);
 
         //truncate message
-        char bufer_cropped [length];
+        char bufer_cropped [length+2];
+		memset(bufer_cropped, 0, length+2);
         strncpy(bufer_cropped, buf, length);
 		strcat(bufer_cropped, "\0"); // David: add termination string
         //Parse string
@@ -199,7 +225,7 @@ int command_listener(void)
         printf(" Command number is %d\n", command.command_n);
         switch(command.command_n)
         {
-            case 1: //command: 1:policy:t_obj:threshold
+            case 1: //command: 0:policy:t_obj:threshold
             {
 
                 if (strcmp(command.options[0], "EFFICIENCY") == 0)
@@ -324,7 +350,7 @@ int command_listener(void)
                 //command: 2:
                 //Establish a flag to perform a load balancing at the end of the given sampling interval
                 pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
-                EMPI_GLOBAL_perform_load_balance = 1;
+				EMPI_GLOBAL_monitoring_data.lbalance=1;
                 pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 
                 break;
@@ -362,7 +388,7 @@ int command_listener(void)
 				pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 				
 				if (strcmp (command.options[i],"on") == 0 && active==0){
-					
+
 					pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 					EMPI_GLOBAL_posteractive=1;
 					pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
@@ -384,6 +410,8 @@ int command_listener(void)
 
                     rc = pthread_create(&thread, &attr, (void*)&service_poster, (void*)&args);
                     check_posix_return(rc, "Creating thread");
+					
+
 				}
 				else{
 					pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
@@ -407,7 +435,7 @@ int command_listener(void)
 								
 				pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 				
-				if(EMPI_GLOBAL_listrm[0] ==1){ 
+				if(EMPI_GLOBAL_listrm[0] >0){ 
 				  printf(" Command ignored: previous command already being processed. Try again later \n" );
 				} 
 				else{ // Asigna el incremento de procesos (deltaP) a cada clase	
@@ -468,6 +496,62 @@ int command_listener(void)
 				
 
                 break;
+				
+			case 9:  
+				// Command 9: delay the I/O Phase
+								
+				pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+				
+				// Sets the trigger to do the core binding
+				if(EMPI_GLOBAL_delayio ==1){ 
+				  printf(" Command ignored: previous command 9 already being processed with a delay of %f secs. Try again later \n",EMPI_GLOBAL_delayiotime );
+				} 
+				else{
+					EMPI_GLOBAL_delayio=1;
+					if(command.options[0] != NULL) {
+						EMPI_GLOBAL_delayiotime=atof(command.options[0]);
+					}
+					printf(" Delaying I/O phase %f seconds  \n",EMPI_GLOBAL_delayiotime);
+					
+				}
+				pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+                break;
+				
+			case 10:  
+				// Command 10: unlock the I/O Phase
+				printf(" Releasing the I/O phase   \n");
+				pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+				EMPI_GLOBAL_delayio=0;
+				EMPI_GLOBAL_delayiotime=0;
+				pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);	
+                break;
+                
+            case 11:  
+				// Command 6: triggered execution for a given iteration
+								
+				pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+				
+				if(EMPI_GLOBAL_listrm[0] >0){ 
+				  printf(" Command ignored: previous command already being processed. Try again later \n" );
+				} 
+				else{ // Asigna el incremento de procesos (deltaP) a cada clase	
+					 i = 0;
+                     EMPI_GLOBAL_listrm[0]=atoi(command.options[i]); // Iteration number for the reconfiguring action
+                     i=1;
+					 do
+					 {
+						for (n = 0; n < EMPI_GLOBAL_nhclasses; n ++) {
+							if (strcmp (EMPI_GLOBAL_hclasses[n], command.options[i]) == 0 && atoi(command.options[i+1])!=0) {
+								EMPI_GLOBAL_nprocs_class[0][n] = atoi(command.options[i+1]); // Delta proc (increment/decrement in the proc number)
+								printf(" Command: Create %d processes in compute node: %s at iteration %d\n",EMPI_GLOBAL_nprocs_class[0][n],EMPI_GLOBAL_hclasses[n],EMPI_GLOBAL_listrm[0]);
+							}
+						}
+						i+=2;
+					 } while (command.options[i] != NULL);
+				}
+				pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+                break;
+                
             default:
                 break;
         }

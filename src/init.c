@@ -98,10 +98,10 @@ static void EMPI_Parse_efile (int argc, char **argv);
 
 /****************************************************************************************************************************************
 *
-*	'FLEXMPI_Init'
+*	'MPI_Init'
 *
 ****************************************************************************************************************************************/
-int FLEXMPI_Init (int *argc, char ***argv) {
+int MPI_Init (int *argc, char ***argv) {
 
 	// printf("In MPI_Init\n");
 	//debug
@@ -110,9 +110,9 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 	#endif
 
 	int err, rank, size, tag=997, rprocs, rdata[4], n;
-	//int provided;
+	int provided;
 	
-	int blocklen [15] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, EMPI_Monitor_string_size, EMPI_Monitor_string_size,1,1,1};
+	int blocklen [16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, EMPI_Monitor_string_size, EMPI_Monitor_string_size,1,1,1,1};
 	//int blocklen_energy [2] = {1, 1};
 	int energy_rank = -1;
 
@@ -124,22 +124,25 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 
 	MPI_Status mpi_status;
 
-	MPI_Datatype EMPI_monitor_struct_type [15] = {MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_DOUBLE, MPI_LONG_LONG, MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_CHAR, MPI_CHAR,MPI_INT,MPI_INT, MPI_DOUBLE};
+	MPI_Datatype EMPI_monitor_struct_type [16] = {MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_DOUBLE, MPI_LONG_LONG, MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_CHAR, MPI_CHAR, MPI_INT,MPI_INT, MPI_INT, MPI_DOUBLE};
 
 
 	//Init MPI environment
-   	//err = PMPI_Init (argc, argv);
-	/*
-	
-	err = PMPI_Init_thread(argc, argv,MPI_THREAD_FUNNELED,&provided); // The new threads do not perform MPI calls
-	
-   	if (err == MPI_ERR_OTHER) return MPI_ERR_OTHER;
+	err = PMPI_Init_thread(argc, argv,MPI_THREAD_FUNNELED,&provided); 
 	if(provided!=MPI_THREAD_FUNNELED){
 	  	fprintf(stderr,"Error in MPI_Init routine: MPI_THREAD_FUNNELED is not supported \n");
 	  	exit(1);		
-	}
-	*/
-		
+	}	
+    
+    /*
+    err = PMPI_Init_thread(argc, argv,MPI_THREAD_MULTIPLE,&provided); // The new threads do not perform MPI calls
+	if(provided!=MPI_THREAD_MULTIPLE){
+	  	fprintf(stderr,"Error in MPI_Init routine: MPI_THREAD_MULTIPLE is not supported \n");
+	  	exit(1);		
+	}	
+    */
+   	if (err == MPI_ERR_OTHER) return MPI_ERR_OTHER;
+	
 	//Initialize global variables with default values
 	EMPI_GLOBAL_tcomp = EMPI_GLOBAL_tcomm = EMPI_GLOBAL_PAPI_rtime_init = EMPI_GLOBAL_PAPI_ptime_init = EMPI_GLOBAL_hpos = 0;
 	EMPI_GLOBAL_overhead_rpolicy = EMPI_GLOBAL_overhead_lbalance = EMPI_GLOBAL_overhead_processes = EMPI_GLOBAL_overhead_rdata = EMPI_GLOBAL_overhead_aux = 0;
@@ -181,6 +184,9 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 	EMPI_GLOBAL_nextrm = -1;
 	EMPI_GLOBAL_Adaptability_policy = EMPI_ADAPTABILITY_EX;
 	EMPI_GLOBAL_percentage = 0.25;
+	EMPI_GLOBAL_corebinding=0;
+	EMPI_GLOBAL_delayio=0;
+	EMPI_GLOBAL_delayiotime=0;
 	
 	// Poster thread (initially not active)
 	EMPI_GLOBAL_posteractive =0;
@@ -220,8 +226,6 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 	
 	// We need to protect it because the server access to EMPI_GLOBAL_PAPI_nhwpc_* when option 7 is used
 	pthread_mutex_lock(&EMPI_GLOBAL_server_lock); // Only the server has an attached thread
-	
-	
 	// Default values for hwpc_1 and hwpc_2 hardware counters
 	sprintf(EMPI_GLOBAL_PAPI_nhwpc_1,"PAPI_SP_OPS");
 	sprintf(EMPI_GLOBAL_PAPI_nhwpc_2,"PAPI_TOT_CYC");	
@@ -229,9 +233,12 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 	strncpy(EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_PAPI_nhwpc_2,EMPI_Monitor_string_size);
 	EMPI_GLOBAL_monitoring_data.termination=0; // 0 means no termination
 	EMPI_GLOBAL_corebinding=0; // Sets no core binding as default
+
+	sprintf(EMPI_GLOBAL_controller,"NULL"); // Default name of the external server
 	
 	pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 
+	
 	// No process-core binding
 	EMPI_GLOBAL_monitor.corebinding=0;
 	
@@ -266,11 +273,13 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 	displs[12] = address - start_address;
 	MPI_Get_address (&(EMPI_GLOBAL_monitor.termination), &address);
 	displs[13] = address - start_address;
-	MPI_Get_address (&(EMPI_GLOBAL_monitor.iotime), &address);
+	MPI_Get_address (&(EMPI_GLOBAL_monitor.lbalance), &address);
 	displs[14] = address - start_address;
+	MPI_Get_address (&(EMPI_GLOBAL_monitor.iotime), &address);
+	displs[15] = address - start_address;
 	
 	//MPI datatype
-	MPI_Type_create_struct (15, blocklen, displs, EMPI_monitor_struct_type, &EMPI_Monitor_Datatype);
+	MPI_Type_create_struct (16, blocklen, displs, EMPI_monitor_struct_type, &EMPI_Monitor_Datatype);
 	MPI_Type_commit (&EMPI_Monitor_Datatype);
 
 	// MPI_Type_create_struct (2, blocklen, displs, EMPI_monitor_struct_type, &EMPI_Monitor_Datatype);
@@ -312,10 +321,9 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 
 	//Parse EMPI global options
 	EMPI_Parse_options (*argc, *argv);
-
+	
+	// Spawned process
    	if (parentcomm != MPI_COMM_NULL) {
-   		//Spawned process
-
 		
 		// Clarisse Control Point: disconnnect from the server
 		//cls_server_disconnect();	
@@ -331,9 +339,10 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 			fprintf (stdout, "\n*** DEBUG_MSG::call::MPI_Intercomm_merge in line %d function EMPI_Init in <%s> ***\n", __LINE__, __FILE__);
 		#endif
 
+
+		
    		//Merge intercommunicator
    		err = MPI_Intercomm_merge (parentcomm, 1, &EMPI_COMM_WORLD);
-
    		if (err) fprintf (stderr, "Error in MPI_Intercomm_merge\n");
 
 		//debug
@@ -343,12 +352,11 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 
    		//Disconnect aux communicator
    		err = MPI_Comm_disconnect (&parentcomm);
-
 		if (err) fprintf (stderr, "Error in MPI_Comm_disconnect\n");
-
-		//Recv rprocs, minprocs, iteration and hostid
-		PMPI_Recv (&rdata, 4, MPI_INT, EMPI_root, tag, EMPI_COMM_WORLD, &mpi_status);
-
+			
+		//Recv rprocs, minprocs, iteration and hostid. The MPI_Send command is executed in EMPI_Spawn function. 
+		PMPI_Recv (rdata, 4, MPI_INT, EMPI_root, tag, EMPI_COMM_WORLD, &mpi_status);
+		
 		//Set rprocs, minprocs, iteration and hostid
 		rprocs = rdata[0];
 		EMPI_GLOBAL_minprocs = rdata[1];
@@ -360,9 +368,6 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 			fprintf (stdout, "\n*** DEBUG_MSG::call::EMPI_Spawn in line %d function EMPI_Init in <%s> ***\n", __LINE__, __FILE__);
 		#endif
  
-		//Remaining spawns
-		EMPI_Spawn (rprocs, NULL, NULL, NULL, NULL);
-
 		MPI_Comm_rank (EMPI_COMM_WORLD, &rank);
 		MPI_Comm_size (EMPI_COMM_WORLD, &size);
 
@@ -390,8 +395,8 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 		//set dynamic workload
 		EMPI_GLOBAL_wpolicy = EMPI_DYNAMIC;
 
-   	} else {
-   		//Native process
+   	} else { //Native process
+   		
 
    		//Initialize global variables
 		EMPI_GLOBAL_nhosts = 0;
@@ -412,9 +417,9 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 			fprintf (stdout, "\n*** DEBUG_MSG::call::EMPI_Parse_cfile in line %d function EMPI_Init in <%s> ***\n", __LINE__, __FILE__);
 		#endif
 
-		//Parse cfile
+		//Parse cfile with the node list
 		EMPI_Parse_cfile (*argc, *argv);
-
+		
 		//Create system table
 		EMPI_Create_system_classes ();
 
@@ -496,8 +501,7 @@ int FLEXMPI_Init (int *argc, char ***argv) {
 *	'MPI_Finalize'
 *
 ****************************************************************************************************************************************/
-int FLEXMPI_Finalize (void) {
-
+int MPI_Finalize (void) {
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Finalize in <%s> ***\n", __FILE__);
@@ -506,6 +510,7 @@ int FLEXMPI_Finalize (void) {
 	int err,eventcode_hwpc_1,eventcode_hwpc_2,active;
 
 	long long values[3] = {0, 0, 0};
+
 	
 	// Detects if monitoring thread is active
 	pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
@@ -546,6 +551,7 @@ int FLEXMPI_Finalize (void) {
 		PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2);
 	}
 
+        
 	//PAPI shutdown
 	PAPI_shutdown();
 
@@ -586,16 +592,15 @@ int FLEXMPI_Finalize (void) {
 	#if (EMPI_DBGMODE == EMPI_DBG_DETAILED)
 		fprintf (stdout, "\n*** DEBUG_MSG::call::MPI_Finalize in line %d function EMPI_Finalize in <%s> ***\n", __LINE__, __FILE__);
 	#endif
-
+    
 	//Finalize MPI environment
-	//err = PMPI_Finalize ();
-	//if (err != MPI_SUCCESS) return MPI_ERR_OTHER;
+	err = PMPI_Finalize ();
+	if (err != MPI_SUCCESS) return MPI_ERR_OTHER;
 
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::exit::EMPI_Finalize in <%s> ***\n", __FILE__);
     #endif
-
     return MPI_SUCCESS;
 }
 
@@ -995,6 +1000,7 @@ static void EMPI_Parse_cfile (int argc, char **argv) {
 	#endif
 }
 
+				
 /****************************************************************************************************************************************
 *
 *	'EMPI_Parse_options'
@@ -1087,8 +1093,8 @@ static void EMPI_Parse_options (int argc, char **argv) {
 			n = n + 2;
 		}
 
-
-		if (strcmp(argv[n], "-policy-lbalance") == 0) {
+		// This is a policy alternative to triggered where the system only performs load balance operations
+		if (strcmp(argv[n], "-policy-lbalance") == 0) { 
 
 			//Set load balancing policy
 			EMPI_Set_policy (EMPI_LBALANCE);
@@ -1143,6 +1149,13 @@ static void EMPI_Parse_options (int argc, char **argv) {
 			EMPI_Set_lbpolicy (EMPI_LBCOUNTS);
 		}
 
+        if (strcmp(argv[n], "-lbpolicy-static") == 0) {
+
+			//Set execution time policy
+			EMPI_Set_lbpolicy (EMPI_LBSTATIC);
+		}
+
+        
 		if (strcmp(argv[n], "-lbpolicy-disabled") == 0) {
 
 			if (EMPI_GLOBAL_mpolicy != EMPI_LBALANCE) {
@@ -1323,6 +1336,20 @@ static void EMPI_Parse_options (int argc, char **argv) {
 			MPI_Abort (EMPI_COMM_WORLD, -1);
 		}
 		
+		if ((strcmp(argv[n], "-controller") == 0) && ((n+1) < argc)) {
+
+			//get server name
+			strcpy (EMPI_GLOBAL_controller, argv[n+1]);
+
+		} if ((strcmp(argv[n], "-controller") == 0) && ((n+1) >= argc)) {
+
+			fprintf (stderr, "\nError in EMPI_Parse_options: name of the controller not provided\n");
+
+			//print EMPI usage
+			if (rank == EMPI_root) EMPI_Print_usage ();
+
+			MPI_Abort (EMPI_COMM_WORLD, -1);
+		}
 		
 	}
 
@@ -1385,6 +1412,8 @@ static void EMPI_Print_usage (void) {
 	printf ("\n\n    -lbpolicy-mflops                 set MFLOP/S policy (default)");
 
 	printf ("\n\n    -lbpolicy-counts                 set COUNT/S policy");
+    
+    printf ("\n\n    -lbpolicy-static                 set static block-based policy");
 
 	printf ("\n\n    -lbpolicy-disabled               disable load balancing");
 
@@ -1417,6 +1446,8 @@ static void EMPI_Print_usage (void) {
 	printf ("\n\n    -ni {value}                      number of iterations of the sampling interval (default {10})");
 
 	printf ("\n\n    -nilb {value}                    number of iterations of the sampling interval for load balancing in irregular applications (default {10})");
+
+	printf ("\n\n    -controller {value}                  name of the host that runs the external controller (default {NULL})");
 
 	printf ("\n\nExamples:");
 
