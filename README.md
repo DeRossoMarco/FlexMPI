@@ -20,41 +20,9 @@ The following libraries and compiler are required for compilation:
 * GLPK (GNU Linear Programming Kit) (>= 4.47)
 * MPI MPICH distribution (>3.2)
 
-## How do I get set up? ##
+## How do I get set up and execute? ##
 
-bash
-git clone https://gitlab.arcos.inf.uc3m.es:8380/desingh/FlexMPI.git
-
- Assumming that FlexMPI is installed in ~/FlexMPI 
-bash
-
-cd ~/FlexMPI
-[configure Makefile providing paths to the exisitng libraries and include files]
-make
-
-cd ~/FlexMPI/examples
-[configure Makefile providing paths to the exisitng libraries and include files]
-make
-
-cd ~/FlexMPI/controller
-[configure Makefile providing paths to the exisitng libraries and include files]
-make
-
-cd ~/FlexMPI/scripts
-chmod 755 ./Lanza_Jacobi_IO.sh
-
-Environment variables
-Assumming that the libraries are installed in $HOME/LIBS
-export LD_LIBRARY_PATH=$HOME/LIBS/glpk/lib/:$HOME/FlexMPI/lib/:$HOME/LIBS/mpich/lib/:$HOME/LIBS/papi/lib/:$LD_LIBRARY_PATH
-
-onfiguration files
-It is necessary to setup the configuration files in ~/FlexMPI/configuration_files directory
-
-## Execution ##
-
-bash. 
-cd ~/FlexMPI/controller
-./controller
+Instructions are included in the FlexMPI User Manual.
 
 
 ## Acknowledgements ##
