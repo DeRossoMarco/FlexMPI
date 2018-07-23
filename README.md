@@ -20,7 +20,7 @@ The following libraries and compiler are required for compilation:
 * GLPK (GNU Linear Programming Kit) (>= 4.47)
 * MPI MPICH distribution (>3.2)
 
-## How do I get set up and execute? ##
+## How do I get set up and execute the program? ##
 
 Instructions are included in the FlexMPI User Manual.
 
