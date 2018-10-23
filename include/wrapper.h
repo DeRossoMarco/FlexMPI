@@ -1,6 +1,6 @@
 /**
-* @version		FlexMPI v1.4
-* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @version		FlexMPI v3.1
+* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -29,21 +29,13 @@
 #ifndef _EMPI_WRAPPER_H_
 #define _EMPI_WRAPPER_H_
 
-/****************************************************************************************************************************************
-*
-*	'FLEXMPI_File_write_dummy'
-*
-****************************************************************************************************************************************/
-int FLEXMPI_File_write_dummy(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
-                       MPI_Status *status) MPICH_ATTR_POINTER_WITH_TYPE_TAG(2,4);
-					   
 
 /****************************************************************************************************************************************
 *
-*	'FLEXMPI_File_write_all'
+*	'MPI_File_write_all'
 *
 ****************************************************************************************************************************************/
-int FLEXMPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
+int MPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
                        MPI_Status *status) MPICH_ATTR_POINTER_WITH_TYPE_TAG(2,4);
 					   			  
 				  

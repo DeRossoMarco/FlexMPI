@@ -1,6 +1,6 @@
 /**
-* @version		FlexMPI v1.4
-* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @version		FlexMPI v3.1
+* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -1158,11 +1158,8 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
             }
 
 			// David
-			if (*rank == EMPI_root) 
-            {    
-             printf ("Iter: %d \t FLOPs: %lld \t MFLOPS:: %lf \t RTIME:: %lf \t PTIME:: %lf \t CTIME:: %lf \t IOTime:: %lf \t Size: %i\n", iter, smonitor[0].flops, (double)((double)smonitor[0].flops)/((double)smonitor[0].rtime), ((double)smonitor[0].rtime)/1000000,((double)smonitor[0].ptime)/1000000, smonitor[0].ctime, smonitor[0].iotime, *size);
-             fflush(stdout);
-            }
+			if (*rank == EMPI_root) printf ("Iter: %d \t FLOPs: %lld \t MFLOPS:: %lf \t RTIME:: %lf \t PTIME:: %lf \t CTIME:: %lf \t IOTime:: %lf \t Size: %i\n", iter, smonitor[0].flops, (double)((double)smonitor[0].flops)/((double)smonitor[0].rtime), ((double)smonitor[0].rtime)/1000000,((double)smonitor[0].ptime)/1000000, smonitor[0].ctime, smonitor[0].iotime, *size);
+
             //reset variables
             EMPI_GLOBAL_PAPI_rtime = EMPI_GLOBAL_PAPI_ptime = EMPI_GLOBAL_PAPI_flops = EMPI_GLOBAL_PAPI_hwpc_1 = EMPI_GLOBAL_PAPI_hwpc_2 = 0;
             
@@ -4862,7 +4859,21 @@ static void EMPI_Monitor_remove (int *rank, int *size, int nprocs, int count, in
 	EMPI_GLOBAL_lastoverhead_rdata= MPI_Wtime() - tini;
     EMPI_GLOBAL_overhead_rdata += EMPI_GLOBAL_lastoverhead_rdata;
 	
+	// Begin Clarisse Control point
+	/*
+	printf("  Process [%d] Clarisse control point reached \n",*rank);
+	extern MPI_File fh;
+	int err;
+	err = MPI_File_close(&fh);
+    if (err != MPI_SUCCESS) printf(" Native processs [%d]: error closing file \n",*rank);
+	cls_server_disconnect();		
+	*/
+	// End Clarisse Control point
+	
+	
     tini = MPI_Wtime();
+
+
 	
     //remove processes
     EMPI_Remove (nprocs, rremvs);
@@ -4893,6 +4904,15 @@ static void EMPI_Monitor_remove (int *rank, int *size, int nprocs, int count, in
         memcpy (EMPI_GLOBAL_vcounts, vcounts, (*size)*sizeof(int));
         memcpy (EMPI_GLOBAL_displs, displs, (*size)*sizeof(int));
 		
+		// Begin Clarisse Control point
+		/*
+		cls_set_client_intracomm(EMPI_COMM_WORLD);
+		MPI_Barrier(EMPI_COMM_WORLD);
+		cls_server_connect();
+		err = MPI_File_open(EMPI_COMM_WORLD, "abcd", MPI_MODE_CREATE | MPI_MODE_RDWR ,	MPI_INFO_NULL, &fh); // It should happend 
+		if (err != MPI_SUCCESS)	printf(" Native processs [%d]: error opening file \n",*rank);
+		*/
+		// End Clarisse Control point
 
 
     } else {
@@ -4905,7 +4925,6 @@ static void EMPI_Monitor_remove (int *rank, int *size, int nprocs, int count, in
         *rank = MPI_PROC_NULL;
 		// David: instead of having a unused process this terminates the process 
 		MPI_Finalize ();
-        exit(0);
     }	
 
     free (vcounts);

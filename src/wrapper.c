@@ -1,6 +1,6 @@
 /**
-* @version		FlexMPI v1.4
-* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @version		FlexMPI v3.1
+* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -29,76 +29,40 @@
 /* include */
 #include <empi.h>
 
+
 /****************************************************************************************************************************************
 *
 *	'MPI_File_write_all'
 *
 ****************************************************************************************************************************************/
-int FLEXMPI_File_write_dummy(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
+int MPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
                        MPI_Status *status) MPICH_ATTR_POINTER_WITH_TYPE_TAG(2,4) {
-	int err,rank;
+	int err,rank,size;
 	double iot2,iot1,local_delayiotime;
 	int local_delayio,termination;
+    
+	char socketcmd[1024]; 
 	
 	MPI_Comm_rank(EMPI_COMM_WORLD,&rank);
-	
+    MPI_Comm_size (EMPI_COMM_WORLD, &size);
+
 	//capture io
 	//if (EMPI_GLOBAL_capture_comms) EMPI_Capture_comms (MPI_ALLGATHER, &sendcount, sendtype);
-	if(rank==0){
-		pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
-		local_delayiotime=EMPI_GLOBAL_delayiotime;
-		local_delayio=EMPI_GLOBAL_delayio;
-		termination=EMPI_GLOBAL_monitoring_data.termination;
-        pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
-				
-		// Detects whether there is I/O delay (only root proc)
-		if(local_delayio==1 && local_delayiotime>0 && termination==0){		
-			iot1=MPI_Wtime();
-			iot2=MPI_Wtime();
-			while((iot2-iot1)<local_delayiotime) iot2=MPI_Wtime(); // Delay only applied to the root process		
-		}
-		
-		while(local_delayio==1 && local_delayiotime==-1  && termination==0){
-			sleep(1);
-			pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
-			local_delayiotime=EMPI_GLOBAL_delayiotime;
-			local_delayio=EMPI_GLOBAL_delayio;
-            termination=EMPI_GLOBAL_monitoring_data.termination;
-			pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
-		}		
-		
-		pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
-		EMPI_GLOBAL_delayiotime=0;
-		EMPI_GLOBAL_delayio=0;
-		pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+
+   
+    pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+	EMPI_GLOBAL_delayiotime=-1;
+	EMPI_GLOBAL_delayio=1;
+	pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+
+    EMPI_GLOBAL_tio_ini = MPI_Wtime();
+    
+    // Sends controller acquire request
+    if(rank==0){
+		sprintf(socketcmd,"ACQIO");
+		sendto(EMPI_GLOBAL_socket,socketcmd,strlen(socketcmd),0,(struct sockaddr *)&EMPI_GLOBAL_controller_addr,sizeof(EMPI_GLOBAL_controller_addr));     
 	}
-				
-	EMPI_GLOBAL_tio_ini = MPI_Wtime();
-	
-	err=1;
-
-	EMPI_GLOBAL_tio_fin = MPI_Wtime();
-
-	EMPI_GLOBAL_tio += (EMPI_GLOBAL_tio_fin - EMPI_GLOBAL_tio_ini);
-		
-	return err;
-}
-
-/****************************************************************************************************************************************
-*
-*	'MPI_File_write_all'
-*
-****************************************************************************************************************************************/
-int FLEXMPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
-                       MPI_Status *status) MPICH_ATTR_POINTER_WITH_TYPE_TAG(2,4) {
-	int err,rank;
-	double iot2,iot1,local_delayiotime;
-	int local_delayio,termination;
-	
-	MPI_Comm_rank(EMPI_COMM_WORLD,&rank);
-
-	//capture io
-	//if (EMPI_GLOBAL_capture_comms) EMPI_Capture_comms (MPI_ALLGATHER, &sendcount, sendtype);
+            
 	if(rank==0){
 		pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 		local_delayiotime=EMPI_GLOBAL_delayiotime;
@@ -112,9 +76,10 @@ int FLEXMPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype
 			iot2=MPI_Wtime();
 			while((iot2-iot1)<local_delayiotime) iot2=MPI_Wtime(); // Delay only applied to the root process		
 		}
-		
+        
+        // Performs active waiting until receiving the command "9:"
 		while(local_delayio==1 && local_delayiotime==-1 && termination==0){
-			sleep(1);
+			usleep(10000); // Active waiting of 10ms
 			pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 			local_delayiotime=EMPI_GLOBAL_delayiotime;
 			local_delayio=EMPI_GLOBAL_delayio;
@@ -128,16 +93,41 @@ int FLEXMPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype
 		pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 	}
 
-    EMPI_GLOBAL_tio_ini = MPI_Wtime();
+    MPI_Barrier(EMPI_COMM_WORLD);	                       
 
 	//MPI call
-	err =  PMPI_File_write_all(fh, buf, count, datatype, status);
-	
-
+    if(EMPI_GLOBAL_dummyIO<0){
+        err =  PMPI_File_write_all(fh, buf, count, datatype, status);
+    }
+    else{
+		iot1=MPI_Wtime();
+		iot2=MPI_Wtime();
+		while((iot2-iot1)<EMPI_GLOBAL_dummyIO) iot2=MPI_Wtime(); // Delaty EMPI_GLOBAL_dummyIO seconds. Active waiting.
+		err=0;
+    }
+   
+            
+    MPI_Barrier(EMPI_COMM_WORLD);	                       
 	EMPI_GLOBAL_tio_fin = MPI_Wtime();
+    
 
 	EMPI_GLOBAL_tio += (EMPI_GLOBAL_tio_fin - EMPI_GLOBAL_tio_ini);
-		
+
+
+    // Sends controller release notification
+ 	if(rank==0){
+        sprintf(socketcmd,"RELQIO");
+		sendto(EMPI_GLOBAL_socket,socketcmd,strlen(socketcmd),0,(struct sockaddr *)&EMPI_GLOBAL_controller_addr,sizeof(EMPI_GLOBAL_controller_addr));     
+	}  
+    
+    // Sends controller I/O stats
+    if(rank==0){
+              sprintf(socketcmd,"IO %s %d %f %d %f %f",EMPI_GLOBAL_application,EMPI_GLOBAL_iteration,(EMPI_GLOBAL_tio_fin - EMPI_GLOBAL_tio_ini),size,(EMPI_GLOBAL_tio_fin - EMPI_GLOBAL_tio_ini),EMPI_GLOBAL_tio_ini-EMPI_GLOBAL_tio_last);   
+               sendto(EMPI_GLOBAL_socket,socketcmd,strlen(socketcmd),0,(struct sockaddr *)&EMPI_GLOBAL_controller_addr,sizeof(EMPI_GLOBAL_controller_addr));     
+   }
+    
+    EMPI_GLOBAL_tio_last = EMPI_GLOBAL_tio_fin;
+
 	return err;
 }
 

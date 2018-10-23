@@ -1,6 +1,6 @@
 /**
-* @version		FlexMPI v1.4
-* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @version		FlexMPI v3.1
+* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
 /****************************************************************************************************************************************
  *																																		*
- *	FLEX-MPI																															*
+ *	FlexMPI 3.1																															*
  *																																		*
  *	File:       controller.c																											*
  *																																		*
@@ -46,7 +46,6 @@
 #define BUFLEN 512
 #define NUMBER_OPTIONS 10
 #define EMPI_COMMBUFFSIZE 2048
-
 // WS1 -> Mínimum number of samples to make a prediction
 // WS2 -> Maximum number of samples used in the prediction
 #define MAX_APPS            50
@@ -89,6 +88,8 @@ int GLOBAL_napps, GLOBAL_RECONF, GLOBAL_PREDEFSPEEDUP,GLOBAL_SYNCIOPHASES,GLOBAL
 int GLOBAL_reqIO[MAX_APPS];
 int GLOBAL_EXEC,GLOBAL_ADHOC, GLOBAL_RECORDEDSPEEDUP, GLOBAL_RECORDEDEXECTIMES,GLOBAL_MAXTHROUGHPUT,GLOBAL_FAIRSCHEDULING_NP,GLOBAL_SPEEDUPSCHEDULING_NP;
 int GLOBAL_CLARISSEONLY,GLOBAL_FAIRSHEDULING,GLOBAL_SPEEDUPSCHEDULING,GLOBAL_IOSCHEDULING;
+int GLOBAL_SCHEDULING_IO;
+
 char GLOBAL_FILE[1024],GLOBAL_CONTROLLER_NODE[1024],GUI_NODE[1024];
 int newPort1, newPort2;
 
@@ -118,6 +119,7 @@ int flag_speedup[MAX_APPS];
 int Tconf=2; // Global reconfiguration time
 int terminated_app;
 int GLOBAL_totalcores;
+int GLOBAL_DEBUG;
 
 struct arg_struct1 {
     int id;
@@ -203,6 +205,181 @@ typedef struct service_arguments {
 // Function declaration
 void diep(char *s);
 
+// Provides the number of cores in use of a given compute node
+// Note: this funcion has to be called inside a critical section (protected by lock/unlock)
+// Output = -1:: not enough resources   Output = 0:: commmand completed
+int allocnodes(int appid,int delta_p, char* command, int iter){	
+	int n,i,j;
+	int num_classes,max,min,maxindex,cnt,flag; // Number of cores per node 
+	int *val1,*val2,*index,*tmpval,*tmpval2;
+	char tmpcommand[1024];
+	
+	num_classes=GLOBAL_app[appid].nhclasses;
+
+	val1=(int*)malloc(num_classes*sizeof(int));
+	val2=(int*)malloc(num_classes*sizeof(int));
+	index=(int*)malloc(num_classes*sizeof(int));
+	tmpval=(int*)malloc(num_classes*sizeof(int));
+	tmpval2=(int*)malloc(num_classes*sizeof(int));
+
+	if(val1==NULL || val2==NULL || index==NULL || tmpval==NULL || tmpval2==NULL){
+		diep("Error allocating memmory in allocnodes function.");	
+	}
+	
+	for(i=0;i<num_classes;i++){
+		val1[i]=0;
+		val2[i]=0;
+	}
+		
+	// Obtains the cores in use per application
+	for (n=0;n<GLOBAL_napps;n++){
+		for(i=0;i<num_classes;i++){
+			if(n==appid) 	val1[i]=val1[i]+GLOBAL_app[n].nprocs_class[i];
+			else			val2[i]=val2[i]+GLOBAL_app[n].nprocs_class[i];
+		}
+	}
+	
+	// Spawned process 
+	if(delta_p>0){
+	
+		for (i=0;i<num_classes;i++) tmpval[i]=val1[i];
+	
+		// Sorts the list (ew use the permutation vector index);
+		for (i=0;i<num_classes;i++){
+			max=-100;
+			for (j=0;j<num_classes;j++){
+			   if(tmpval[j]>max) {
+				max=tmpval[j];
+				maxindex=j;
+			   }
+			}
+			index[i]=maxindex;
+			tmpval[maxindex]=-100;
+		}
+
+		// Uses the nodes with greatest number of local processes
+		cnt=0;
+		j=0;
+		for (i=0;i<num_classes;i++) tmpval[i]=0;
+		
+		while(cnt<delta_p && j<num_classes){
+			i=index[j];
+			if(val1[i]+val2[i]+tmpval[i]<GLOBAL_app[appid].ncores_class[i]){ // David: check
+				tmpval[i]++;
+				cnt++;
+			}
+			else{
+				j=j+1;
+			}	
+		}
+	}
+	
+	// Process destruction
+	else if(delta_p<0){
+		
+		for (i=0;i<num_classes;i++) tmpval2[i]=GLOBAL_app[appid].newprocs_class[i]; // Only considers the spawned processes of the current application
+	
+		// Sorts the list new use the permutation vector index);
+		for (i=0;i<num_classes;i++){
+			min=1000000;
+			for (j=0;j<num_classes;j++){
+			   if(tmpval2[j]<min) {
+				min=tmpval2[j];
+				maxindex=j;
+			   }
+			}
+			index[i]=maxindex;
+			tmpval2[maxindex]=1000000;
+		}
+
+		// Uses the nodes with greatest number of local processes
+		cnt=0;
+		j=0;
+		
+		for (i=0;i<num_classes;i++){
+			tmpval[i]=0;
+			tmpval2[i]=GLOBAL_app[appid].newprocs_class[i]; // Only considers the spawned processes of the current application
+		} 
+		
+		while(cnt>delta_p && j<num_classes){
+			i=index[j];
+			if(tmpval2[i]>0){
+				tmpval2[i]--;  // Absolute (total) values
+				tmpval[i]--;   // Relative (incremented) values
+				cnt--;
+			}
+			else{
+				j=j+1;
+			}	
+		}
+	}
+		
+	if(j==num_classes){
+		printf("    # I/O Scheduler error: not enough resources: %d \n",delta_p);
+		return(-1);
+	}
+	
+	// Updates output classes
+	for (i=0;i<num_classes;i++){
+		GLOBAL_app[appid].nprocs_class[i]+=tmpval[i];  	// Total number of processes
+		GLOBAL_app[appid].newprocs_class[i]+=tmpval[i];	// Spawn processes
+	}
+	
+	printf(" 		### I/O Scheduler node allocation for application %d: Spawn processes: %d\n",appid,delta_p);
+	printf(" 		### Application [%d] :  ",appid);
+	for (i=0;i<num_classes;i++) printf(" %d",val1[i]);
+	printf("\n");
+	printf(" 		### Tot spawmned[%d] :  ",appid);
+	for (i=0;i<num_classes;i++) printf(" %d",GLOBAL_app[appid].newprocs_class[i]);
+	printf("\n");
+	printf(" 		### Used by other   :  ");
+	for (i=0;i<num_classes;i++) printf(" %d",val2[i]);
+	printf("\n");
+	printf(" 		### Allocated       :  ");
+	for (i=0;i<num_classes;i++) printf(" %d",tmpval[i]);
+	printf("\n");
+
+	
+	//for (i=0;i<num_classes;i++){
+	//	printf(" 		### Class [%d]:: %s %s\n",i,GLOBAL_app[appid].hclasses[i],GLOBAL_app[appid].rclasses[i]);
+	//}
+	
+	// Generates output string
+    if(iter==0){
+        sprintf(command,"6");
+    }
+    else{
+        sprintf(command,"11:%d",iter);
+    }
+	
+	flag=0;
+	for (i=0;i<num_classes;i++){
+		if(tmpval[i]!=0){
+			flag=1;
+			sprintf(tmpcommand,":%s:%d",GLOBAL_app[appid].rclasses[i],tmpval[i]);
+			strcat(command,tmpcommand);
+		} 
+	} 
+	
+	if(flag==0){ // Reconfiguration is not performed
+		printf(" ### I/O Scheduler: no change in the number of processes. Reconfiguring action cancelled \n");
+		return(-1);		
+	}
+	
+	sprintf(tmpcommand,":");
+	strcat(command,tmpcommand);
+	
+	
+	
+	printf(" 		### Output string   :  %s \n",command);
+	
+	free(val1);
+	free(val2);
+	return(0);
+}
+
+
+
 
 // Kills all the active applications
 void killall(int id)
@@ -245,9 +422,6 @@ void killall(int id)
             // Closes the socket
             close(initialSocket);
             
-            //sprintf(npingcmd,"nping --udp -g 5000 -p %d  -c 1 %s --data-string \"%s\">/dev/null",GLOBAL_app[n].port1,GLOBAL_app[n].node,nodes);
-            //printf("\t*** %s \n",npingcmd);
-            //system(npingcmd);
         }
 	}
 }
@@ -282,7 +456,8 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
 	int  LOCAL_nprocs_class[NCLASES];
 	int  LOCAL_ncores[NCLASES];
 	int LOCAL_nhclasses;
-    int Nsize,NIO,NCPU,NCOM;
+    int Nsize,NIO,NCPU,NCOM,NumIter;
+    double IOaction;
     
 	// int maxindex,max;
 	
@@ -367,11 +542,6 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
         // Obtains the application size
         record = strtok (NULL, token);;
         Nsize=atoi(record);
-
-        // Obtains the number of IO iterations
-        record = strtok (NULL, token);;
-        NIO=atoi(record);
-        GLOBAL_app[nfile].IO_intensity=NIO;
         
         // Obtains the number of CPU iterations
         record = strtok (NULL, token);;
@@ -382,6 +552,19 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
         record = strtok (NULL, token);
         NCOM=atoi(record);
         GLOBAL_app[nfile].com_intensity=NCOM;
+
+        // Obtains the number of IO iterations
+        record = strtok (NULL, token);;
+        NIO=atoi(record);
+        GLOBAL_app[nfile].IO_intensity=NIO;
+        
+        // Obtains the value of IO action
+        record = strtok (NULL, token);
+        IOaction=atof(record);
+
+        // Obtains the number of iterations
+        record = strtok (NULL, token);
+        NumIter=atoi(record);
         
 		// Following entries are the compute nodes and max initial processes per nodes
 		while (record != NULL) {
@@ -499,7 +682,7 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
         if (appclass==4) sprintf(line,"./Lanza_com %d %d %d %d\n",nprocs,port1,port2,nfile+1);
         if (appclass==5) sprintf(line," %s/FlexMPI/examples/examples2/source/benchmarks/write/vpicio/vpicio_uni/Lanza_IO %d %d %d %d\n",HOME,nprocs,port1,port2,nfile+1);
 		if (appclass==6) sprintf(line,"./Lanza_clarisse %d %d %d %d\n",nprocs,port1,port2,nfile+1);
-		if (appclass==7) sprintf(line,"./Lanza_Jacobi_IO.sh %d %d %d %d %d %d %d %d\n",nprocs,port1,port2,nfile+1,Nsize,NIO,NCPU,NCOM); //Blues
+		if (appclass==7) sprintf(line,"./Lanza_Jacobi_IO.sh %d %d %d %d %d %d %d %d %f %d\n",nprocs,port1,port2,nfile+1,Nsize,NIO,NCPU,NCOM,IOaction,NumIter);
 		if (appclass==8) sprintf(line,"./Lanza_JacobiEmulator_IO.sh %d %d %d %d\n",nprocs,port1,port2,nfile+1);
 		port1+=2;
 		port2+=2;
@@ -524,7 +707,6 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
 		sprintf(output,"%s/FlexMPI/controller/execscripts/exec%d > ./logs/output%d 2>&1 &",HOME,nfile+1,nfile+1);
 		if((GLOBAL_EXEC==1 &&  benchmark_mode!=1 ) || GLOBAL_ADHOC>0){
 			system(output); // This is the system call to execute
-			//sleep(10);
 		}
 		nfile++;
 	}
@@ -551,24 +733,44 @@ void check_posix_return(int rc, char* cause)
 }
 
 
+
+
 // Listener thread. One per application
 int command_listener(void *arguments)
 {
     struct sockaddr_in si_me;
     struct sockaddr_in si_other;
+    struct sockaddr_in serverAddr;
+    struct sockaddr_in appAddr;
     
-    int s, slen = sizeof(si_other),id,local_terminated_app;
+    int i, s, n, slen = sizeof(si_other),id,local_terminated_app,tmp,local_reconf,cnt,iter;
+	int WS,busyIO;
 	struct arg_struct1 *args = arguments;
+	struct timeval timestamp1,timestamp2;
+	uint64_t delta_t;
+	double delta_long,delta_cpu,tot_IO,tmp_dl,tmp_dt,delayttime;
 	double rtime,ptime,ctime,mflops,count1,count2,iotime,size;
 	char *token;
+	FILE *fp;
+	char path[1035];
+	int flag[MAX_APPS],flag2;
+	char appcmd[1024];
+    
+    struct hostent   *he;
+    socklen_t addr_size;   
 	
     char * buf     = calloc(EMPI_COMMBUFFSIZE, 1);
-       
+	char bashcmd[1024];
+        
+	for(i=0;i<MAX_APPS;i++){
+		if(GLOBAL_monitoring) 	flag[i]=0; // Monitoring activated
+		else flag[i]=1; // Monitoring not activated
+	}
 	
     // Configures the socket reception
     if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {
-        diep("socket");
+        diep("socket1");
     }
     memset((char *) &si_me, 0, sizeof(si_me));
     si_me.sin_family = AF_INET;
@@ -577,31 +779,153 @@ int command_listener(void *arguments)
 
     if (bind(s, (struct sockaddr *)&si_me, sizeof(si_me))==-1)
     {
-        diep("bind");
+        diep("bind1");
     }
-    
+
+    // Configures the connection with GUI
+    if(GLOBAL_GUI){
+        
+        /*Configure settings in address struct*/
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(GLOBAL_GUI_PORT);
+        
+        if ( (he = gethostbyname(GUI_NODE) ) == NULL ) {
+            diep("Error resolving host name");
+            exit(1); /* error */
+        }
                 
+        serverAddr.sin_addr=*(struct in_addr *) he->h_addr;
+        memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));  
+        addr_size = sizeof(serverAddr); 
+        
+        id=args->id;
+        sprintf(buf,"./app:1000:2018/02/26-11:22@format@%d@%d",id,GUI_ListenerPort);
+        printf("  --- Connection with graphic interface at %s port %d with string %s\n",GUI_NODE,GLOBAL_GUI_PORT,buf);    
+        
+        // Sends the connection command to the GUI (only once)
+        sendto(s,buf,strlen(buf),0,(struct sockaddr *)&serverAddr,addr_size);  
+    }        
 	// Main loop that reads the buffer values
-	id=args->id;
+	
     while(1)
     {
         memset(buf, 0, EMPI_COMMBUFFSIZE);
         int length = recvfrom(s, buf, EMPI_COMMBUFFSIZE, 0, (struct sockaddr *)&si_other, (socklen_t *)&slen);
-        printf("\n Incoming message: %s",buf);
+        if(GLOBAL_DEBUG) printf("  Message received [%d]: %s \n",args->id,buf);
 		fflush(stdout);
 		if (length == -1)
         {
             diep("recvfrom()");
         }
 		
-		if(strcmp(buf,"Aplication terminated")==0)
+		// IO operation
+		if(buf[0]=='I' && buf[1]=='O')
+		{
+			gettimeofday(&timestamp1, NULL);
+			delta_t = (timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
+
+			/* get the first token */
+			token = strtok(buf, " ");
+			if(token!=NULL)  token = strtok(NULL, " ");
+			if(token!=NULL)
+			{
+				token = strtok(NULL, " ");
+				iter=atoi(token);
+				token = strtok(NULL, " ");
+				delta_long=atof(token);
+				token = strtok(NULL, " ");
+				size=atof(token);
+				token = strtok(NULL, " ");
+				tot_IO=atof(token);
+				token = strtok(NULL, " ");
+				delta_cpu=atof(token);
+                
+                
+                id=args->id;
+
+				// Activates monitoring the first time
+				if(flag[id]==0){
+ 
+                    appAddr.sin_family = AF_INET;
+                    appAddr.sin_port = htons(GLOBAL_app[id].port1);
+                    if ( (he = gethostbyname(GLOBAL_app[id].node) ) == NULL ) {
+                        diep("Error resolving application name");
+                        exit(1); /* error */
+                    }
+                
+                    appAddr.sin_addr=*(struct in_addr *) he->h_addr;
+                    memset(appAddr.sin_zero, '\0', sizeof(appAddr.sin_zero));  
+                    addr_size = sizeof(appAddr); 
+        
+                    sprintf(appcmd,"4:on");
+        
+                    sendto(s,appcmd,strlen(appcmd),0,(struct sockaddr *)&appAddr,addr_size);  
+					 
+					printf("\n\n ***  command_listener: Activating monitoring of application %d ",id);
+					flag[id]=1;
+				}
+
+				pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+				if(id+1>napps) napps=id+1;		 
+				// Store values
+				
+				
+                GLOBAL_iter[id]=iter;
+                
+                // Counts the delayed execution time
+				delayttime=GLOBAL_delayt1[id];
+				if(GLOBAL_delayt1[id]!=0) GLOBAL_delayt1[id]=0;
+				
+                niter[cnt_app[id]][id]=iter;
+				tstamp[cnt_app[id]][id]=(double)delta_t/1000-delta_long+delayttime; // The message is sent after the I/O, thus we have to substract its duration + the delay time of the operation
+                tlong[cnt_app[id]][id]=delta_long;
+				cput[cnt_app[id]][id]=delta_cpu;
+                numprocs[cnt_app[id]][id]=(int)size;
+				cnt_app[id]++;
+                if(cnt_app[id]>=NUMSAMPLES){
+                    diep("command_listener error: out-of-memory. Increase NUMSAMPLES \n ");
+                }
+				update[id]++;
+				tmp_dl=0;
+				tmp_dt=0;
+				 
+				// Make a prediction
+				tmp=cnt_app[id]-reset[id]-1; 			// Existing samples
+				if(tmp<WS1) WS=0;  						// Not enough samples
+				else if(tmp>=WS1 && tmp>WS2) WS=WS2;	// Maximum number of samples (WS2)
+				else if(tmp>=WS1 && tmp<=WS2) WS=tmp;	// Intermediate value between (WS1,WS2]
+				 
+				// printf(" 	Prediction window size: %d [%d, %d %d] \n",WS,tmp,cnt_app[id],reset[id]);
+					 
+				 if(WS>0){
+					 for(i=0;i<WS;i++){
+						 tmp_dl=tmp_dl+tlong[cnt_app[id]-1-i][id];
+						 tmp_dt=tmp_dt+(tstamp[cnt_app[id]-1-i][id]-tstamp[cnt_app[id]-2-i][id]);
+					 }
+					 tmp_dt=tmp_dt/WS;
+					 tmp_dl=tmp_dl/WS;
+					 
+					 // Generates the prediction
+					 for(i=0;i<STAMPSIZE;i++){
+						 p_tstamp[i][id]=tstamp[cnt_app[id]-1][id]+tmp_dt*(i+1); 
+					 }
+					 p_tlong[id]=tmp_dl;
+				 }
+				 
+				 printf("      IO:: %d [size: %d]  \t T= %.4f \t  dT= %.4f \t cpuT= %.4f\t\t  TotIO= %.4f ",id,(int)size,tstamp[cnt_app[id]-1][id],(tstamp[cnt_app[id]-1][id]-tstamp[cnt_app[id]-2][id]),cput[cnt_app[id]-1][id],tot_IO);
+				 //for(i=0;i<4;i++) printf("%f ",p_tstamp[i][id]);
+				 printf(" \t\t LONG= %.4f [ %.4f ] \n",tlong[cnt_app[id]-1][id],p_tlong[id]);
+				 pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+			 }
+		}
+		else if(strcmp(buf,"Application terminated")==0)
 		{
 		 printf("   	%d termination data from %s:%d --> %s \n",args->id, inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port), buf);
 		 pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
 		 terminated_app++; 
 		 local_terminated_app=terminated_app;
 	     pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);	// Creates one thread per application
-		 printf("\n ** Aplication terminated [%d,%d] \n",terminated_app,GLOBAL_napps);
+		 printf("\n ** application terminated [%d,%d] \n",terminated_app,GLOBAL_napps);
 		 
 		 // ****** Kills all apps when one terminates
 		  //killall(-1); // Terminates all the applications
@@ -615,11 +939,176 @@ int command_listener(void *arguments)
 			  killall(-1); // Terminates all the applications
 			  sleep(5);
 			  
+			  if(0){
+				  for (n=0;n<GLOBAL_napps;n++){
+						/* Open the command for reading. */
+						printf(" *** Application %d log:: \n",n);
+						sprintf(bashcmd,"cat %s/FlexMPI/controller/logs/output%d | grep \"Jacobi fini\" ",HOME,n+1  );
+
+						fp = popen(bashcmd, "r");
+						if (fp == NULL) {
+							printf("Failed to run command\n" );
+							exit(1);
+						}
+
+						/* Read the output a line at a time - output it. */
+						while (fgets(path, sizeof(path)-1, fp) != NULL) {
+							printf("   %s \n", path);
+						}
+
+						/* close */
+						pclose(fp);
+						sleep(5);
+				  }
+			  }
 			  exit(1);
 		 }
 		} 
+		else if(strcmp(buf,"ACQIO")==0)
+		{
+			id=args->id;
+			
+			gettimeofday(&timestamp1, NULL);
+			delta_t=(timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
+			
+			if(GLOBAL_DEBUG) printf("  [ %f ] IO request from %d \n",(double)delta_t/1000,id);			
+			
+            // Only active when I/O operations are scheduled
+            if(GLOBAL_SCHEDULING_IO){
+                pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+                GLOBAL_acqt[n]=(double)delta_t/1000;
+                
+                local_reconf=GLOBAL_RECONF;
+                if(GLOBAL_busyIO){
+                    GLOBAL_reqIO[id]=1; // Queues
+                    busyIO=1;
+                }
+                else{  
+                    GLOBAL_busyIO=1; // Adquires
+                    GLOBAL_reqIO[id]=0;
+                    busyIO=0;
+                }
+                pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+
+                if(local_reconf){
+                    gettimeofday(&timestamp1, NULL);
+                    
+                    flag2=0;
+                    while(busyIO && GLOBAL_TERMINATION==0){
+                        if(flag2) usleep(10000);
+                        flag2=1;
+                        pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+                        if(GLOBAL_reqIO[id]==2){
+                            busyIO=GLOBAL_busyIO;
+                            if(busyIO==0) GLOBAL_busyIO=1; // Adquires
+                            else GLOBAL_reqIO[id]=1;       // Queues
+                        }
+                        pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+                        
+                        // IO Timeout for preventing packet loss
+                        gettimeofday(&timestamp2, NULL);
+                        delta_t=(timestamp2.tv_sec - timestamp1.tv_sec) * 1000 + (timestamp2.tv_usec - timestamp1.tv_usec) / 1000;
+                        if(((double)delta_t)/1000>120){
+                            printf("  *****************************************************************************\n");                        
+                            printf("  *** Warning: maximum IO wait time reached. Releasing IO for application %d \n",id);
+                            printf("  *****************************************************************************\n");                        
+                            pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+                            busyIO=0;
+                            GLOBAL_reqIO[id]=2;
+                            pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+                        } 
+                        
+                    }
+                    gettimeofday(&timestamp2, NULL);
+                    delta_t=(timestamp2.tv_sec - timestamp1.tv_sec) * 1000 + (timestamp2.tv_usec - timestamp1.tv_usec) / 1000;
+                    tmp_dt=(double)((timestamp2.tv_sec - initial.tv_sec)*1000  + (timestamp2.tv_usec - initial.tv_usec)/ 1000)/1000;
+                    if(delta_t>0) printf("  *** [ %f ] Delaying IO request of %d in %f secs. \n",tmp_dt,id,(double)delta_t/1000);
+                    
+                    // Records the delay value
+                    delay_v[cnt_delay[id]][id]=(double)delta_t/1000;
+                    delay_t[cnt_delay[id]][id]=tmp_dt;
+                    cnt_delay[id]++;
+                    
+                    pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+                    GLOBAL_delayt1[id]=(double)delta_t/1000;
+                    GLOBAL_delayt2[id]=(double)delta_t/1000;
+                   
+                    GLOBAL_reqIO[id]=3;
+                    pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+                }
+            }
+     
+			if(GLOBAL_DEBUG){
+				gettimeofday(&timestamp1, NULL);
+				delta_t = (timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
+				printf("  [ %f ] Adquiring IO request from %d \n",(double)delta_t/1000,id);			
+			}
+			
+            // Acknowledges the ACQIO request             
+            appAddr.sin_family = AF_INET;
+            appAddr.sin_port = htons(GLOBAL_app[id].port1);
+            if ( (he = gethostbyname(GLOBAL_app[id].node) ) == NULL ) {
+                diep("Error resolving application name");
+                exit(1); /* error */
+            }
+                
+            appAddr.sin_addr=*(struct in_addr *) he->h_addr;
+            memset(appAddr.sin_zero, '\0', sizeof(appAddr.sin_zero));  
+            addr_size = sizeof(appAddr); 
+        
+            sprintf(appcmd,"10:1");
+        
+            // Sends the connection command to the GUI (only once)
+            sendto(s,appcmd,strlen(appcmd),0,(struct sockaddr *)&appAddr,addr_size);  
+				
+		}
+		else if(strcmp(buf,"RELQIO")==0)
+		{
+			if(GLOBAL_DEBUG){
+				gettimeofday(&timestamp1, NULL);
+				delta_t=(timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
+				printf("  [ %f ] Releasing IO request from %d \n",(double)delta_t/1000,id);			
+			}
+			
+			cnt=0;
+			pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+			GLOBAL_busyIO=0;
+			for(n=0;n<GLOBAL_napps;n++){
+				if(GLOBAL_reqIO[n]==1){
+					GLOBAL_reqIO[n]=2;
+					cnt++;
+				} 
+			}
+			
+			if(GLOBAL_DEBUG){
+				gettimeofday(&timestamp1, NULL);
+				delta_t=(timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
+				printf("  [ %f ] Released IO request from %d granted : ",(double)delta_t/1000,id);
+				for(n=0;n<GLOBAL_napps;n++) printf(" %d ",GLOBAL_reqIO[n]);
+				printf("\n");
+			}
+			
+			GLOBAL_reqIO[id]=0;
+			pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+	
+		}
 		else{
             
+            // Checks for connection with the GUI
+            pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+            if(GLOBAL_app[id].monitor==1){
+               serverAddr.sin_port = htons(GLOBAL_app[id].port3);
+               memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));  
+               addr_size = sizeof(serverAddr); 
+               GLOBAL_app[id].monitor=2;
+            }
+            pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+            
+            // Sends the connection command to the GUI 
+            sendto(s,buf,strlen(buf),0,(struct sockaddr *)&serverAddr,addr_size);
+            // ****************
+           
+			id=args->id;
 			//printf("   			App idd %d sends data from IP %s:%d --> %s",args->id, inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port), buf);
 			if(strlen(buf)>12 && buf[0]=='F' && buf[1]=='L' && buf[2]=='X'){
 				token = strtok(buf, " ");
@@ -676,6 +1165,8 @@ int command_listener(void *arguments)
 	
 }
 
+
+
 // Main program		
 int main (int argc, char** argv)
 {
@@ -697,7 +1188,7 @@ int main (int argc, char** argv)
 	pthread_t thread[MAX_APPS*2+8];
 	pthread_attr_t attr[MAX_APPS*2+8];
 	printf("\n \n **************************************************************** \n");
-	printf("      FlexMPI program controller 2.05\n");
+	printf("      FlexMPI external controller 3.1\n");
 	printf("\n \n **************************************************************** \n");
 	
 	printf("\n \n --- Initializing\n");
@@ -711,8 +1202,6 @@ int main (int argc, char** argv)
 	
 	// Captures ctrl+c signal and exists killing all the apps
 	signal(SIGINT, intHandler);
-
-
 
 	pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
 	
@@ -736,8 +1225,8 @@ int main (int argc, char** argv)
 	}
 	pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
 	
-	if(GLOBAL_RECONF==1) printf("\n ### Application maleability enabled \n\n\n");
-	else printf("\n ### Application maleability disabled \n\n\n");
+	if(GLOBAL_RECONF==1) printf("\n   # Application maleability enabled \n");
+	else printf("\n   # Application maleability disabled \n\n\n");
 
 	// if flag -noexecute is present: only generates exec scripts (it does not execute the application)
 	GLOBAL_EXEC=1;
@@ -746,7 +1235,7 @@ int main (int argc, char** argv)
 			GLOBAL_EXEC=0;
 		}
 	}
-	if(GLOBAL_EXEC==0) printf("\n ### Generating the execution scripts but not runnning the application \n\n\n");
+	if(GLOBAL_EXEC==0) printf("\n   # Generating the execution scripts but not runnning the application \n");
 	
 	// if flag -adhoc is present: only spawns the given number of processes and then exits. 
 	GLOBAL_ADHOC=0;
@@ -755,7 +1244,7 @@ int main (int argc, char** argv)
 			GLOBAL_ADHOC=atoi(argv[n+1]);
 		}
 	}
-	if(GLOBAL_ADHOC>0) printf("\n ### Performing an ad-hoc dynamic configuration and exiting.... \n\n\n");
+	if(GLOBAL_ADHOC>0) printf("\n   # Performing an ad-hoc dynamic configuration and exiting.... \n");
 	
 	GLOBAL_monitoring=0;
 	for (n = 0; n < argc; n ++) {
@@ -763,16 +1252,24 @@ int main (int argc, char** argv)
 			GLOBAL_monitoring=1;
 		}
 	}
-	if(GLOBAL_monitoring==1) printf("\n ### Activating global monitoring.... \n\n\n");
+	if(GLOBAL_monitoring==1) printf("\n   # Activating global monitoring.... \n");
 	
-	
+	GLOBAL_DEBUG=0;
+ 	for (n = 0; n < argc; n ++) {
+		if (strcmp(argv[n], "-debug") == 0) {
+			GLOBAL_DEBUG=1;
+		}
+	}
+	if(GLOBAL_DEBUG==1) printf("\n   # Activating debug mode.... \n");
+   
+    
 	GLOBAL_PREDEFSPEEDUP=0;
 	for (n = 0; n < argc; n ++) {
 		if (strcmp(argv[n], "-predefinedspeedup") == 0) {			
 			GLOBAL_PREDEFSPEEDUP=1;
 		}
 	}
-	if(GLOBAL_PREDEFSPEEDUP==1) printf("\n ### Application becnhmarking not activated \n\n\n");
+	if(GLOBAL_PREDEFSPEEDUP==1) printf("\n   # Application becnhmarking not activated \n");
 
 	
 	GLOBAL_RECORDEDSPEEDUP=0;
@@ -782,7 +1279,7 @@ int main (int argc, char** argv)
 			strcpy(GLOBAL_FILE,argv[n+1]);
 		}
 	}
-	if(GLOBAL_RECORDEDSPEEDUP==1) printf("\n ### Speedup loaded from file %s \n\n\n",GLOBAL_FILE);
+	if(GLOBAL_RECORDEDSPEEDUP==1) printf("\n   # Speedup loaded from file %s \n",GLOBAL_FILE);
 	
 	GLOBAL_RECORDEDEXECTIMES=0;
 	for (n = 0; n < argc; n ++) {
@@ -791,7 +1288,7 @@ int main (int argc, char** argv)
 			strcpy(GLOBAL_FILE,argv[n+1]);
 		}
 	}
-	if(GLOBAL_RECORDEDEXECTIMES==1) printf("\n ### Execution times loaded from file %s \n\n\n",GLOBAL_FILE);
+	if(GLOBAL_RECORDEDEXECTIMES==1) printf("\n   # Execution times loaded from file %s \n",GLOBAL_FILE);
 
 	GLOBAL_MAXTHROUGHPUT=0;
 	for (n = 0; n < argc; n ++) {
@@ -799,7 +1296,7 @@ int main (int argc, char** argv)
 			GLOBAL_MAXTHROUGHPUT=1;
 		}
 	}
-	if(GLOBAL_MAXTHROUGHPUT==1) printf("\n ### Maximum throughput policy activated \n\n\n");
+	if(GLOBAL_MAXTHROUGHPUT==1) printf("\n   # Maximum throughput policy activated \n");
 
     GLOBAL_CLARISSEONLY=0;
 	for (n = 0; n < argc; n ++) {
@@ -807,7 +1304,7 @@ int main (int argc, char** argv)
 			GLOBAL_CLARISSEONLY=1;
 		}
 	}
-	if(GLOBAL_CLARISSEONLY==1) printf("\n ### Running only with Clarisse. Malleability disabled \n\n\n");
+	if(GLOBAL_CLARISSEONLY==1) printf("\n   # Running only with Clarisse's I/O Scheduling. Malleability disabled \n\n\n");
 
 	
 	if(GLOBAL_RECORDEDSPEEDUP+GLOBAL_RECORDEDEXECTIMES>1){
@@ -820,8 +1317,18 @@ int main (int argc, char** argv)
 			GLOBAL_SYNCIOPHASES=1;
 		}
 	}
-	if(GLOBAL_SYNCIOPHASES==1) printf("\n ### I/O period phases adjusted \n\n\n");
+	if(GLOBAL_SYNCIOPHASES==1) printf("\n   # I/O period phases adjusted \n");
 
+    GLOBAL_SCHEDULING_IO=0;
+	for (n = 0; n < argc; n ++) {
+		if (strcmp(argv[n], "-scheduling_io") == 0) {			
+			GLOBAL_SCHEDULING_IO=1;
+		}
+	}
+    
+	if(GLOBAL_SCHEDULING_IO==1) printf("\n   # I/O scheduling activated. \n");
+	else                        printf("\n   # I/O not scheduled \n");
+    
     GLOBAL_FAIRSHEDULING=0;
 	for (n = 0; n < argc; n ++) {
 		if (strcmp(argv[n], "-fair_scheduling") == 0) {			
@@ -830,8 +1337,8 @@ int main (int argc, char** argv)
 		}
 	}
     
-	if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP==-1) printf("\n ### Fair sheduler activated using all the available processors \n\n\n");
-	if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP>=0) printf("\n ### Fair sheduler activated using %d processors \n\n\n",GLOBAL_FAIRSCHEDULING_NP);
+	if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP==-1) printf("\n   # Fair sheduler activated using all the available processors \n");
+	if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP>=0) printf("\n   # Fair sheduler activated using %d processors \n",GLOBAL_FAIRSCHEDULING_NP);
 
     GLOBAL_SPEEDUPSCHEDULING=0;
  	for (n = 0; n < argc; n ++) {
@@ -840,8 +1347,8 @@ int main (int argc, char** argv)
             GLOBAL_SPEEDUPSCHEDULING_NP=atoi(argv[n+1]);
 		}
 	}
-	if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP==-1) printf("\n ### Speedup-based sheduler activated using all the available processors \n\n\n");
-	if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP>=0) printf("\n ### Speedup-based sheduler activated using %d processors \n\n\n",GLOBAL_SPEEDUPSCHEDULING_NP);
+	if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP==-1) printf("\n   # Speedup-based sheduler activated using all the available processors \n");
+	if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP>=0) printf("\n   # Speedup-based sheduler activated using %d processors \n",GLOBAL_SPEEDUPSCHEDULING_NP);
     
     GLOBAL_IOSCHEDULING=0;
     GLOBAL_IOSCHEDULING_THRESHOLD=-1;
@@ -854,7 +1361,7 @@ int main (int argc, char** argv)
             }
 		}
 	}
-	if(GLOBAL_IOSCHEDULING==1) printf("\n ### IO-based sheduler activated \n\n\n");
+	if(GLOBAL_IOSCHEDULING==1) printf("\n   # IO-based scheduler activated \n");
    
 	if(GLOBAL_IOSCHEDULING+GLOBAL_SPEEDUPSCHEDULING+GLOBAL_FAIRSHEDULING+GLOBAL_CLARISSEONLY+GLOBAL_MAXTHROUGHPUT+GLOBAL_SYNCIOPHASES>1){
 		diep("Error: flags -clarisseonly -maxthroughput and -synciophases cannot be used at the same time \n");
@@ -869,7 +1376,7 @@ int main (int argc, char** argv)
             GUI_ListenerPort=atoi(argv[n+3]);;
 		}
 	}
-	if(GLOBAL_GUI==1) printf("\n ### Graphic user interface node located in %s with port1: %d \n\n\n",GUI_NODE,GLOBAL_GUI_PORT);
+	if(GLOBAL_GUI==1) printf("\n   # Graphic user interface node located in %s with port1: %d \n",GUI_NODE,GLOBAL_GUI_PORT);
     
 	// Variable initialization
 	pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
@@ -888,7 +1395,7 @@ int main (int argc, char** argv)
 	
 	// Launches applications in benchmark mode
 	
-	Parse_malleability("workload.dat","../run/nodefile2.dat",GLOBAL_RECORDEDSPEEDUP+GLOBAL_RECORDEDEXECTIMES);
+	Parse_malleability("workload.dat","../run/nodefile2.dat",1+GLOBAL_RECORDEDSPEEDUP+GLOBAL_RECORDEDEXECTIMES);
 	
 	// Prints the application execution environment
 	printf("\n \n --- Displaying the application workload in benchmark mode\n");
@@ -928,7 +1435,7 @@ int main (int argc, char** argv)
 	pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);	// Creates one thread per application
 	
 	// Creates listener threads
-	printf("\n \n --- Creating the listerner threads \n");
+	printf("\n \n --- Creating the listener threads \n");
 	for(n=0;n<GLOBAL_napps;n++){ 
 		args1[n].id = n;
 		args1[n].port2 = GLOBAL_app[n].port2;
@@ -936,13 +1443,20 @@ int main (int argc, char** argv)
 		check_posix_return(rc, "Initializing attribute");
 		rc = pthread_create(&thread[n], &attr[n], (void*)&command_listener,(void *)(&args1[n]));
 		check_posix_return(rc, "Creating listener thread ");
-        sleep(10); // ToDo: REMOCE
+        sleep(5); 
 	}
 
 	printf("\n Entering execution phase ..... \n\n");
-		
+	
+	if(GLOBAL_RECORDEDSPEEDUP!=1 && GLOBAL_RECORDEDEXECTIMES!=1)  sleep(15);
+	
+	pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
+	terminated_app=0;  // Final value is the number of applications
+	pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);	// Creates one thread per application
 	
 
+	printf("\n Waiting to execute the application.... \n");
+	if(GLOBAL_PREDEFSPEEDUP!=1 && GLOBAL_RECORDEDSPEEDUP!=1 && GLOBAL_RECORDEDEXECTIMES!=1) sleep(60);
 	
 	// Sets the initial time value (for the new application)
 	pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
@@ -978,7 +1492,7 @@ int main (int argc, char** argv)
 	// Input commands
 	printf("\n \n  --- Waiting for new input commands \n");
 	
-	fflush(NULL);
+	fflush(stdout);
 	
 	while(1)
 	{
@@ -1014,7 +1528,7 @@ int main (int argc, char** argv)
             // Closes the socket
             close(initialSocket);
 
-            printf("Message: %s  Size: %d bytes sent to app%d at %s with port %d\n",initMsg, (int)sizeof(initMsg),n+1,GLOBAL_app[n].node,GLOBAL_app[n].port1);
+            printf("Message: %s. Size: %d bytes sent to app%d.\n",initMsg, (int)sizeof(initMsg),n+1);
         }
 	}
 	

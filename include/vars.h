@@ -1,6 +1,6 @@
 /**
-* @version		FlexMPI v1.4
-* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @version		FlexMPI v3.1
+* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -141,7 +141,8 @@ int EMPI_GLOBAL_nhclasses; //number of host classes
 
 char EMPI_GLOBAL_hclasses[100][128]; //host classes
 
-char EMPI_GLOBAL_controller[512]; // external server name
+char EMPI_GLOBAL_controller[512];   // external server name
+char EMPI_GLOBAL_application[512];  // application name
 
 int EMPI_GLOBAL_lbalance_disabled;
 
@@ -172,10 +173,10 @@ int EMPI_GLOBAL_spolicy; //spawn policy: available nodes or occupied nodes
 
 int EMPI_GLOBAL_iteration;
 
-double EMPI_GLOBAL_tcomp; //aggregated computation time
-double EMPI_GLOBAL_tcomm; //aggregated communication time
-double EMPI_GLOBAL_tover; //aggregated overhead time of the monitor funciontality
-double EMPI_GLOBAL_tio; //aggregated communication time
+double EMPI_GLOBAL_tcomp;   //aggregated computation time
+double EMPI_GLOBAL_tcomm;   //aggregated communication time
+double EMPI_GLOBAL_tover;   //aggregated overhead time of the monitor functionality
+double EMPI_GLOBAL_tio;     //aggregated communication time
 
 double EMPI_GLOBAL_tcomm_itinit;
 double EMPI_GLOBAL_tcomm_interval;
@@ -189,8 +190,12 @@ double EMPI_GLOBAL_tcomp_fin;
 double EMPI_GLOBAL_tcomm_ini;
 double EMPI_GLOBAL_tcomm_fin;
 
-double EMPI_GLOBAL_tio_ini;
-double EMPI_GLOBAL_tio_fin;
+double EMPI_GLOBAL_tio_last;    // Timestamp of the previous I/O operation
+double EMPI_GLOBAL_tio_ini;     // Timestamp before the I/O operation
+double EMPI_GLOBAL_tio_fin;     // Timestamp after the I/O operation
+int    EMPI_GLOBAL_socket;      // Socket for sending control data
+struct sockaddr_in EMPI_GLOBAL_controller_addr;  // Address of the controller 
+double EMPI_GLOBAL_dummyIO;     // When <0 performs MPI I/O; When >=0 performs dummy I/O of EMPI_GLOBAL_dummyIO seconds 
 
 double EMPI_GLOBAL_iterative_ini;
 double EMPI_GLOBAL_iterative_end;

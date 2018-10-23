@@ -10,5 +10,8 @@ done
 
 controllernode=`cat ../controller/controller.dat`
 
-~/LIBS/mpich/bin/mpiexec -genvall -f /home/desingh/FlexMPI/controller/rankfiles/rankfile$4 -np $1 /tmp/jacobi_IO$4 $5 300000 0.00001 $7 $8 $6 $4 $controllernode -cfile ../run/nodefile2.dat -policy-malleability-triggered -lbpolicy-static -ni 20 -ports $2 $3 -controller $controllernode
+echo ~/LIBS/mpich/bin/mpiexec -genvall -f /home/desingh/FlexMPI/controller/rankfiles/rankfile$4 -np $1 /tmp/jacobi_IO$4 $5 $10 0.00001 $7 $8 $6 $4 $controllernode -cfile ../run/nodefile2.dat -policy-malleability-triggered -lbpolicy-static -ni 20 -ports $2 $3 -controller $controllernode -IOaction $9
+
+~/LIBS/mpich/bin/mpiexec -genvall -f /home/desingh/FlexMPI/controller/rankfiles/rankfile$4 -np $1 /tmp/jacobi_IO$4 $5 $10 0.00001 $7 $8 $6 $4 $controllernode -cfile ../run/nodefile2.dat -policy-malleability-triggered -lbpolicy-static -ni 20 -ports $2 $3 -controller $controllernode -IOaction $9
+
 

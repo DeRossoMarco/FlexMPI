@@ -1,6 +1,6 @@
 /**
-* @version		FlexMPI v1.4
-* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @version		FlexMPI v3.1
+* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -98,12 +98,11 @@ static void EMPI_Parse_efile (int argc, char **argv);
 
 /****************************************************************************************************************************************
 *
-*	'MPI_Init'
+*	'FLEXMPI_Init'
 *
 ****************************************************************************************************************************************/
 int MPI_Init (int *argc, char ***argv) {
 
-	// printf("In MPI_Init\n");
 	//debug
 	#if (EMPI_DBGMODE > EMPI_DBG_QUIET)
 		fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Init in <%s> ***\n", __FILE__);
@@ -126,22 +125,19 @@ int MPI_Init (int *argc, char ***argv) {
 
 	MPI_Datatype EMPI_monitor_struct_type [16] = {MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_DOUBLE, MPI_LONG_LONG, MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_CHAR, MPI_CHAR, MPI_INT,MPI_INT, MPI_INT, MPI_DOUBLE};
 
+    // Used for configuring the socket (controller communication)
+    struct sockaddr_in si_me;
+    struct hostent   *he;
 
-	//Init MPI environment
-	err = PMPI_Init_thread(argc, argv,MPI_THREAD_FUNNELED,&provided); 
+	//Initialize MPI environment
+	err = MPI_Init_thread(argc, argv,MPI_THREAD_FUNNELED,&provided); // The new threads do not perform MPI calls
+	
+   	if (err == MPI_ERR_OTHER) return MPI_ERR_OTHER;
 	if(provided!=MPI_THREAD_FUNNELED){
 	  	fprintf(stderr,"Error in MPI_Init routine: MPI_THREAD_FUNNELED is not supported \n");
 	  	exit(1);		
-	}	
-    
-    /*
-    err = PMPI_Init_thread(argc, argv,MPI_THREAD_MULTIPLE,&provided); // The new threads do not perform MPI calls
-	if(provided!=MPI_THREAD_MULTIPLE){
-	  	fprintf(stderr,"Error in MPI_Init routine: MPI_THREAD_MULTIPLE is not supported \n");
-	  	exit(1);		
-	}	
-    */
-   	if (err == MPI_ERR_OTHER) return MPI_ERR_OTHER;
+	}
+	
 	
 	//Initialize global variables with default values
 	EMPI_GLOBAL_tcomp = EMPI_GLOBAL_tcomm = EMPI_GLOBAL_PAPI_rtime_init = EMPI_GLOBAL_PAPI_ptime_init = EMPI_GLOBAL_hpos = 0;
@@ -185,12 +181,17 @@ int MPI_Init (int *argc, char ***argv) {
 	EMPI_GLOBAL_Adaptability_policy = EMPI_ADAPTABILITY_EX;
 	EMPI_GLOBAL_percentage = 0.25;
 	EMPI_GLOBAL_corebinding=0;
+    
+    // I/O-related variables
 	EMPI_GLOBAL_delayio=0;
 	EMPI_GLOBAL_delayiotime=0;
-	
-	// Poster thread (initially not active)
-	EMPI_GLOBAL_posteractive =0;
+    EMPI_GLOBAL_tio_last = MPI_Wtime();
+    EMPI_GLOBAL_tio_ini = EMPI_GLOBAL_tio_fin = 0;
+	EMPI_GLOBAL_socket=-1;
+    EMPI_GLOBAL_dummyIO=-1;     // When <0 performs MPI I/O; When >=0 performs dummy I/O of EMPI_GLOBAL_dummyIO seconds 
 
+	// Poster thread (initially not active)
+	EMPI_GLOBAL_posteractive = 0;
 
 	//EMPI_GLOBAL_spawn_cost = 0.520147; //0.520147085671638 old
 	EMPI_GLOBAL_spawn_cost = 0.3248116; //0.520147085671638
@@ -231,17 +232,19 @@ int MPI_Init (int *argc, char ***argv) {
 	sprintf(EMPI_GLOBAL_PAPI_nhwpc_2,"PAPI_TOT_CYC");	
 	strncpy(EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_PAPI_nhwpc_1,EMPI_Monitor_string_size);
 	strncpy(EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_PAPI_nhwpc_2,EMPI_Monitor_string_size);
-	EMPI_GLOBAL_monitoring_data.termination=0; // 0 means no termination
-	EMPI_GLOBAL_corebinding=0; // Sets no core binding as default
+	EMPI_GLOBAL_monitoring_data.termination=0;                // 0 means no termination
+	EMPI_GLOBAL_corebinding=0;                                // Sets no core binding as default
 
-	sprintf(EMPI_GLOBAL_controller,"NULL"); // Default name of the external server
-	
+	sprintf(EMPI_GLOBAL_controller,"NULL");                   // Default name of the external server
+	strcpy(EMPI_GLOBAL_application,*argv[0]); // Name of the application
+    
 	pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 
 	
 	// No process-core binding
 	EMPI_GLOBAL_monitor.corebinding=0;
-	
+  
+     
 	// Generates a Datatype for the monitor struct
 	//displacements
 	MPI_Get_address (&EMPI_GLOBAL_monitor, &start_address);
@@ -432,6 +435,34 @@ int MPI_Init (int *argc, char ***argv) {
 
 	}
 	
+     // Configures the socket for controller communication
+    if (rank == EMPI_root)
+	{
+        if((EMPI_GLOBAL_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+        {
+            printf("Error creating socket \n");
+        }
+        
+        memset((char *) &si_me, 0, sizeof(si_me));
+        si_me.sin_family = AF_INET;
+        si_me.sin_port = htons(EMPI_GLOBAL_recvport+200);
+        si_me.sin_addr.s_addr = htonl(INADDR_ANY);
+
+        if (bind(EMPI_GLOBAL_socket, (struct sockaddr *)&si_me, sizeof(si_me))==-1)
+        {
+            printf("Error binding socket \n");
+        }
+    
+        EMPI_GLOBAL_controller_addr.sin_family = AF_INET;
+        EMPI_GLOBAL_controller_addr.sin_port = htons(EMPI_GLOBAL_sendport);
+
+        if ((he = gethostbyname(EMPI_GLOBAL_controller) ) == NULL ) {
+            printf("Error resolving host name \n");
+        }
+                    
+        EMPI_GLOBAL_controller_addr.sin_addr=*(struct in_addr *) he->h_addr;
+        memset(EMPI_GLOBAL_controller_addr.sin_zero, '\0', sizeof(EMPI_GLOBAL_controller_addr.sin_zero));  
+    }   
 
 	if (rank == EMPI_root) {
 
@@ -466,7 +497,7 @@ int MPI_Init (int *argc, char ***argv) {
 	EMPI_GLOBAL_power_monitoring_data = calloc(EMPI_GLOBAL_minprocs, sizeof(double));
 	
 
-		
+    
 	if (rank == EMPI_root)
 	{
 		int rc;  // return code
@@ -502,16 +533,24 @@ int MPI_Init (int *argc, char ***argv) {
 *
 ****************************************************************************************************************************************/
 int MPI_Finalize (void) {
+
+
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Finalize in <%s> ***\n", __FILE__);
     #endif
 
 	int err,eventcode_hwpc_1,eventcode_hwpc_2,active;
-
 	long long values[3] = {0, 0, 0};
+    char socketcmd[1024]; 
 
-	
+    // Sends the termination command to the controller
+    if(EMPI_GLOBAL_socket!=-1){  // Only rank=0 process has a value != -1
+		sprintf(socketcmd,"Application terminated");
+		sendto(EMPI_GLOBAL_socket,socketcmd,strlen(socketcmd),0,(struct sockaddr *)&EMPI_GLOBAL_controller_addr,sizeof(EMPI_GLOBAL_controller_addr));
+	}
+    
+    
 	// Detects if monitoring thread is active
 	pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 	active=EMPI_GLOBAL_posteractive; 
@@ -551,7 +590,6 @@ int MPI_Finalize (void) {
 		PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2);
 	}
 
-        
 	//PAPI shutdown
 	PAPI_shutdown();
 
@@ -592,7 +630,7 @@ int MPI_Finalize (void) {
 	#if (EMPI_DBGMODE == EMPI_DBG_DETAILED)
 		fprintf (stdout, "\n*** DEBUG_MSG::call::MPI_Finalize in line %d function EMPI_Finalize in <%s> ***\n", __LINE__, __FILE__);
 	#endif
-    
+
 	//Finalize MPI environment
 	err = PMPI_Finalize ();
 	if (err != MPI_SUCCESS) return MPI_ERR_OTHER;
@@ -601,6 +639,7 @@ int MPI_Finalize (void) {
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::exit::EMPI_Finalize in <%s> ***\n", __FILE__);
     #endif
+
     return MPI_SUCCESS;
 }
 
@@ -1341,7 +1380,9 @@ static void EMPI_Parse_options (int argc, char **argv) {
 			//get server name
 			strcpy (EMPI_GLOBAL_controller, argv[n+1]);
 
-		} if ((strcmp(argv[n], "-controller") == 0) && ((n+1) >= argc)) {
+		} 
+        
+        if ((strcmp(argv[n], "-controller") == 0) && ((n+1) >= argc)) {
 
 			fprintf (stderr, "\nError in EMPI_Parse_options: name of the controller not provided\n");
 
@@ -1350,8 +1391,23 @@ static void EMPI_Parse_options (int argc, char **argv) {
 
 			MPI_Abort (EMPI_COMM_WORLD, -1);
 		}
-		
+
+		// Sets if dummy I/O is performed
+		if ((strcmp(argv[n], "-IOaction") == 0)&&((n+1) < argc)) {
+
+			//set number of iterations for monitoring
+			EMPI_GLOBAL_dummyIO = (atof(argv[n+1]));
+
+			//next option
+			n +=1;
+
+        }	
 	}
+    
+    if(rank == EMPI_root){
+            if(EMPI_GLOBAL_dummyIO == -1 ) printf(" FlexMPI: program configured to perform parallel MPI I/O\n");
+            else                           printf(" FlexMPI: program configured to perform dummy I/O of %f seconds\n",EMPI_GLOBAL_dummyIO);
+    }
 
 	//debug
 	#if (EMPI_DBGMODE > EMPI_DBG_QUIET)

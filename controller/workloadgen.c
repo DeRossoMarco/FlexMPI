@@ -19,11 +19,9 @@
 */
 
 /****************************************************************************************************************************************
- *																																		*
- *	FLEX-MPI																															*
- *																																		*
- *	File:       workloadgen.c																											*
- *																																		*
+ FLEX-MPI
+ 
+File:workloadgen.c																											
  ****************************************************************************************************************************************/
  
 
@@ -40,7 +38,7 @@ int GLOBAL_DIFFERENTNODES, GLOBAL_EXCLCONTROLLER;
 int CONTROLLERPROCS;
 
 // This file generates the workload  
-static void Workload_generator (char *filename,int napp, int * nproc, int * Nsize,int * NIO, int * NCPU, int * NCOM) 
+static void Workload_generator (char *filename,int napp, int * nproc, int * Nsize,int * NIO, int * NCPU, int * NCOM, double * IOaction, int * NumIter) 
 {
  	char LOCAL_hclasses[NCLASES][128]; //host classes
 	char LOCAL_rclasses[NCLASES][128]; //host classes
@@ -56,13 +54,13 @@ static void Workload_generator (char *filename,int napp, int * nproc, int * Nsiz
 
 	
 	// Parses the node file
-	printf("  Reading the nodefile ... \n");
+	printf("\n ### Reading the nodefile ... \n");
 	if ((file = fopen (filename, "r")) == NULL) {
 		fprintf (stderr, "\nError opening nodefile in Workload_generator %s \n",filename);
 		exit(1);
 	}
 
-	printf("\n Node names: \t name \t \t alias \t #cores \n");
+	printf("\n   Node names: \t name \t \t alias \t \t #cores \n");
 	// Read and parse node file that contains the node file names
 	LOCAL_nhclasses=0;
     LOCAL_totclasses=0;
@@ -98,7 +96,7 @@ static void Workload_generator (char *filename,int napp, int * nproc, int * Nsiz
 		reqcor+=nproc[i];
 	}
 	
-	printf("\n Required cores: %d, existing cores: %d \n\n",reqcor,availcor);
+	printf("\n   Required cores: %d, existing cores: %d \n\n",reqcor,availcor);
 	
 	if(reqcor>availcor){
 		fprintf (stderr, "\nError in Workload_generator:  not enough resources \n \n");
@@ -144,11 +142,15 @@ static void Workload_generator (char *filename,int napp, int * nproc, int * Nsiz
 		sprintf(line,"jio");
         sprintf(tmp,":%d",Nsize[i]);
         strcat(line,tmp);
-        sprintf(tmp,":%d",NIO[i]);
-        strcat(line,tmp);
         sprintf(tmp,":%d",NCPU[i]);
         strcat(line,tmp);
         sprintf(tmp,":%d",NCOM[i]);
+        strcat(line,tmp);
+        sprintf(tmp,":%d",NIO[i]);
+        strcat(line,tmp);
+        sprintf(tmp,":%f",IOaction[i]);
+        strcat(line,tmp);
+        sprintf(tmp,":%d",NumIter[i]);
         strcat(line,tmp);
         
         LOCAL_nhclasses=currclass[i];
@@ -187,20 +189,20 @@ static void Workload_generator (char *filename,int napp, int * nproc, int * Nsiz
 	}
 	fclose(file);
 
-	printf("\n Exiting.... \n \n");
 }
 
 // Main program		
 int main (int argc, char** argv)
 {
-	int napp,app[1000],Nsize[1000],NIO[1000],NCPU[1000],NCOM[1000];
+	int napp,app[1000],Nsize[1000],NIO[1000],NCPU[1000],NCOM[1000],NumIter[1000];
+    double IOaction[1000];
     int n,i=1;
 	FILE *file;
 	char readline[1000];
     char token[] = ":", *record = NULL;
-	
+    	
 	printf("\n \n **************************************************************** \n");
-	printf("      FlexMPIClarisse program workload generator 2.05\n");
+	printf("      FlexMPIClarisse program workload generator 3.1\n");
 	printf("\n \n **************************************************************** \n");
 	
 	printf("\n \n --- Initializing...\n");
@@ -216,7 +218,7 @@ int main (int argc, char** argv)
 		}
 	}
 	if(GLOBAL_DIFFERENTNODES==1) printf("\n ### Application processes placed in a different compute nodes\n");
-    else printf("\n ### Application processes placed contiguous and consecutive compute nodes\n");
+    else printf("\n ### Application processes placed contiguous and in consecutive compute nodes\n");
     
     CONTROLLERPROCS=0;
     GLOBAL_EXCLCONTROLLER=1;
@@ -241,43 +243,54 @@ int main (int argc, char** argv)
 
 	
      // Parses the node file
-	printf("  Reading the nodefile ... \n");
 	if ((file = fopen (argv[i+1], "r")) == NULL) {
 		fprintf (stderr, "\nError opening application_filename in Workload_generator %s \n",argv[2]);
 		exit(1);
 	}
 	
 	napp=0;
+    printf("\n");
     
-	while (fscanf (file, "%s\n", readline) != EOF) {
-		record = strtok (readline, token);  // Num procs. 
-		if(record==NULL){fprintf (stderr, "\n Error1 parsing %s file \n",argv[2]);exit(1); }
-		app[napp]=atoi(record);
-		record = strtok (NULL, token);  // Size
-		if(record==NULL){fprintf (stderr, "\n Error2 parsing %s file \n",argv[2]);exit(1); }
-		Nsize[napp]=atoi(record);
-		record = strtok (NULL, token);  // NIO
-		if(record==NULL){fprintf (stderr, "\n Error3 parsing %s file \n",argv[2]);exit(1); }
-		NIO[napp]=atoi(record);
-		record = strtok (NULL, token);  // NCPU
-        if(record==NULL){fprintf (stderr, "\n Error4 parsing %s file \n",argv[2]);exit(1); }
-		NCPU[napp]=atoi(record);
-		record = strtok (NULL, token);  // NCOM
-        if(record==NULL){fprintf (stderr, "\n Error5 parsing %s file \n",argv[2]);exit(1); }
-		NCOM[napp]=atoi(record);
-        
-        printf("    Application %d :: Np= %d \t Size= %d \t NIO= %d \t NCPU= %d  \t NCOM= %d \n",napp,app[napp],Nsize[napp],NIO[napp],NCPU[napp],NCOM[napp]);
-		napp++;
-		if(napp>1000){
-			fprintf (stderr, "\nError number of applications  is exceeded \n");
-			exit(1);		 
-		}
+	//while (fscanf (file, "%s\n", readline) != EOF) {
+ 	while (fgets (readline,1000,file) != NULL) {
+        if(readline[0]!='#' && readline[0]!='\n'){
+
+            record = strtok (readline, token);  // Num procs. 
+            if(record==NULL){fprintf (stderr, "\n Error1 parsing %s file \n",argv[2]);exit(1); }           
+            app[napp]=atoi(record);
+            record = strtok (NULL, token);  // Size
+            if(record==NULL){fprintf (stderr, "\n Error2 parsing %s file \n",argv[2]);exit(1); }
+            Nsize[napp]=atoi(record);
+            record = strtok (NULL, token);  // NCPU
+            if(record==NULL){fprintf (stderr, "\n Error3 parsing %s file \n",argv[2]);exit(1); }
+            NCPU[napp]=atoi(record);
+            record = strtok (NULL, token);  // NCOM
+            if(record==NULL){fprintf (stderr, "\n Error4 parsing %s file \n",argv[2]);exit(1); }
+            NCOM[napp]=atoi(record);
+            record = strtok (NULL, token);  // NIO
+            if(record==NULL){fprintf (stderr, "\n Error5 parsing %s file \n",argv[2]);exit(1); }
+            NIO[napp]=atoi(record);
+            record = strtok (NULL, token);  // IOaction
+            if(record==NULL){fprintf (stderr, "\n Error6 parsing %s file \n",argv[2]);exit(1); }
+            IOaction[napp]=atof(record);
+            record = strtok (NULL, token);  // NumIter
+            if(record==NULL){fprintf (stderr, "\n Error7 parsing %s file \n",argv[2]);exit(1); }
+            NumIter[napp]=atof(record);
+            
+            
+            printf("    Application %d :: Np= %d \t Size= %d \t NCPU= %d \t NCOM= %d \t NIO= %d \t IOaction= %f \t NumIter= %d \n",napp,app[napp],Nsize[napp],NCPU[napp],NCOM[napp],NIO[napp],IOaction[napp],NumIter[napp]);
+            napp++;
+            if(napp>1000){
+                fprintf (stderr, "\nError number of applications  is exceeded \n");
+                exit(1);		 
+            }
+        }
 	}
 	fclose(file);
 
 
-	Workload_generator(argv[i],napp,app,Nsize,NIO,NCPU,NCOM);
-	
-	printf("\n --- Terminating...\n\n");
+	Workload_generator(argv[i],napp,app,Nsize,NIO,NCPU,NCOM,IOaction,NumIter);
+	printf("\n\n Exiting.... \n \n");
+    
 	exit(1);
 }

@@ -1,6 +1,6 @@
 /**
-* @version		FlexMPI v1.4
-* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @version		FlexMPI v3.1
+* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -518,7 +518,7 @@ int command_listener(void)
                 break;
 				
 			case 10:  
-				// Command 10: unlock the I/O Phase
+				// Command 10: unlocks the I/O Phase
 				printf(" Releasing the I/O phase   \n");
 				pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
 				EMPI_GLOBAL_delayio=0;
