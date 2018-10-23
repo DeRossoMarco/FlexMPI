@@ -6,7 +6,9 @@ The project goals are:
  
 * To provide MPI applications of malleable capabilities that permit to specify a given application execution time. FLEX-MPI will automatically create or remove new processes to adjust the execution time to the desired objective.
 
-* FLEX-MPI includes two polices that can be used in combination with the malleable capabilities. The aim is to minimize the operational cost or the application energy consumption by efficiently scheduling the application proccesses based on the cluster characteristics. Flex-MPI supports CPU-based heterogeneous multicore clusters.
+* We provide an external controller that is able to execute different applications and dynamically monitor the application performance using hardware counters. 
+
+* FLEX-MPI external controller includes a I/O scheduling algorithm as well as 
 
 * Flex-MPI performs all the optimizations during the application execution, in a transparent way, without user intervention.
  
