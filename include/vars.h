@@ -1,7 +1,7 @@
 /**
-* @version		FlexMPI v3.1
-* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
-* @license		GNU/GPL, see LICENSE.txt
+* @version        FlexMPI v3.1
+* @copyright    Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
+* @license        GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
@@ -19,84 +19,84 @@
 */
 
 /****************************************************************************************************************************************
- *																																		*
- *	FLEX-MPI																															*
- *																																		*
- *	File:       vars.h																													*
- *																																		*
+ *                                                                                                                                        *
+ *    FLEX-MPI                                                                                                                            *
+ *                                                                                                                                        *
+ *    File:       vars.h                                                                                                                    *
+ *                                                                                                                                        *
  ****************************************************************************************************************************************/
 
 #ifndef _EMPI_VARS_H_
 #define _EMPI_VARS_H_
 
-	
+    
 /* include */
 #include <types.h>
 
 /* global constants */
-static const int EMPI_MAX_FILENAME 		= 1024;
-static const int EMPI_MAX_LINE_LENGTH 	= 32768;
-static const int EMPI_MAX_NPROCS 		= 24;
+static const int EMPI_MAX_FILENAME         = 1024;
+static const int EMPI_MAX_LINE_LENGTH     = 32768;
+static const int EMPI_MAX_NPROCS         = 24;
 
-static const int EMPI_root				= 0;
+static const int EMPI_root                = 0;
 
-static const int EMPI_DISJOINT			= 674782;
-static const int EMPI_SHARED			= 617828;
+static const int EMPI_DISJOINT            = 674782;
+static const int EMPI_SHARED            = 617828;
 
-static const int EMPI_CBAL				= 182919;
-static const int EMPI_CUSER				= 192018;
+static const int EMPI_CBAL                = 182919;
+static const int EMPI_CUSER                = 192018;
 
-static const int EMPI_TRUE 				= 674321;
-static const int EMPI_FALSE				= 684312;
+static const int EMPI_TRUE                 = 674321;
+static const int EMPI_FALSE                = 684312;
 
-static const int EMPI_ERROR				= 939199;
+static const int EMPI_ERROR                = 939199;
 
-static const int EMPI_STRUCT_DENSE		= 534321;
-static const int EMPI_STRUCT_SPARSE		= 544312;
+static const int EMPI_STRUCT_DENSE        = 534321;
+static const int EMPI_STRUCT_SPARSE        = 544312;
 
-static const int EMPI_STATIC 			= 324542;
-static const int EMPI_DYNAMIC 			= 325765;
+static const int EMPI_STATIC             = 324542;
+static const int EMPI_DYNAMIC             = 325765;
 
-static const int EMPI_NULL				= 949998;
+static const int EMPI_NULL                = 949998;
 
-static const int EMPI_END 				= 921028;
+static const int EMPI_END                 = 921028;
 
-static const int EMPI_ACTIVE			= 776765;
-static const int EMPI_REMOVED			= 787634;
-static const int EMPI_TO_REMOVE			= 792214;
+static const int EMPI_ACTIVE            = 776765;
+static const int EMPI_REMOVED            = 787634;
+static const int EMPI_TO_REMOVE            = 792214;
 
-static const int EMPI_SPAWNED			= 938594;
-static const int EMPI_NATIVE			= 941490;
+static const int EMPI_SPAWNED            = 938594;
+static const int EMPI_NATIVE            = 941490;
 
-static const int EMPI_LBMFLOPS			= 854392;
-static const int EMPI_LBCOUNTS			= 829010;
-static const int EMPI_LBSTATIC			= 829099;
+static const int EMPI_LBMFLOPS            = 854392;
+static const int EMPI_LBCOUNTS            = 829010;
+static const int EMPI_LBSTATIC            = 829099;
 
-static const int EMPI_ROWS				= 748838;
-static const int EMPI_NNZ	 			= 782891;
-static const int EMPI_FCOST 			= 728191;
+static const int EMPI_ROWS                = 748838;
+static const int EMPI_NNZ                 = 782891;
+static const int EMPI_FCOST             = 728191;
 
-static const int EMPI_BALANCED 			= 189312;
-static const int EMPI_UNBALANCED		= 135894;
+static const int EMPI_BALANCED             = 189312;
+static const int EMPI_UNBALANCED        = 135894;
 
-static const int EMPI_BURST 			= 225615;
-static const int EMPI_LONG_TERM			= 234684;
+static const int EMPI_BURST             = 225615;
+static const int EMPI_LONG_TERM            = 234684;
 
-static const int EMPI_AVAIL_NODE		= 678292;
-static const int EMPI_OCCUP_NODE		= 627543;
+static const int EMPI_AVAIL_NODE        = 678292;
+static const int EMPI_OCCUP_NODE        = 627543;
 
-static const int EMPI_DEDICATED			= 689894;
-static const int EMPI_NON_DEDICATED		= 685138;
+static const int EMPI_DEDICATED            = 689894;
+static const int EMPI_NON_DEDICATED        = 685138;
 
-static const int EMPI_TREAL				= 896646;
-static const int EMPI_TCPU				= 877789;
+static const int EMPI_TREAL                = 896646;
+static const int EMPI_TCPU                = 877789;
 
-static const int EMPI_ADAPTABILITY_EX	= 743289;
-static const int EMPI_ADAPTABILITY_LP	= 718291;
+static const int EMPI_ADAPTABILITY_EX    = 743289;
+static const int EMPI_ADAPTABILITY_LP    = 718291;
 // Communication variables
-static const int EMPI_COMMBUFFSIZE		= 2048;
-static const int EMPI_COMMNPACK			= 10;
-static const int EMPI_COMMNUMOPTIONS 	= 10;
+static const int EMPI_COMMBUFFSIZE        = 2048;
+static const int EMPI_COMMNPACK            = 10;
+static const int EMPI_COMMNUMOPTIONS     = 10;
 
 
 // Communication variables
@@ -249,10 +249,10 @@ double EMPI_GLOBAL_tcomm_interval_lb;
 
 double EMPI_GLOBAL_overhead_rpolicy;
 double EMPI_GLOBAL_overhead_lbalance;
-double EMPI_GLOBAL_overhead_processes; 		// accumulated overhead of process creation/destruction
+double EMPI_GLOBAL_overhead_processes;         // accumulated overhead of process creation/destruction
 double EMPI_GLOBAL_lastoverhead_processes;  // last overhead of the last operation of process creation/destruction
-double EMPI_GLOBAL_overhead_rdata; 			// accumulated overhead of data redistribution
-double EMPI_GLOBAL_lastoverhead_rdata; 		// last overhead of data redistribution
+double EMPI_GLOBAL_overhead_rdata;             // accumulated overhead of data redistribution
+double EMPI_GLOBAL_lastoverhead_rdata;         // last overhead of data redistribution
 double EMPI_GLOBAL_overhead_aux;
 
 long long *EMPI_GLOBAL_track_flops;

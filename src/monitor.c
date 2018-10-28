@@ -1,7 +1,7 @@
 /**
-* @version		FlexMPI v3.1
-* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
-* @license		GNU/GPL, see LICENSE.txt
+* @version        FlexMPI v3.1
+* @copyright    Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
+* @license        GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
@@ -223,9 +223,9 @@ static void EMPI_Iteration_init (void) {
     //tcomm
     EMPI_GLOBAL_tcomm_itinit = EMPI_GLOBAL_tcomm;
 
-	// I/O
+    // I/O
     EMPI_GLOBAL_tio_itinit = EMPI_GLOBAL_tio;
-	
+    
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::exit::EMPI_Iteration_init in <%s> ***\n", __FILE__);
@@ -256,21 +256,21 @@ static void EMPI_Iteration_end (long long *rtime, long long *ptime, long long *f
 
     //*rtime = (PAPI_get_real_usec() - EMPI_GLOBAL_PAPI_rtime_init) - ((EMPI_GLOBAL_tcomm - EMPI_GLOBAL_tcomm_itinit) * 1.0E6);
     *rtime = aux_time - (long long)((EMPI_GLOBAL_tcomm - EMPI_GLOBAL_tcomm_itinit) * 1.0E6);
-	
+    
     // *ptime = (PAPI_get_virt_usec() - EMPI_GLOBAL_PAPI_ptime_init) - ((EMPI_GLOBAL_tcomm - EMPI_GLOBAL_tcomm_itinit) * 1.0E6); // discounts the communication time
     *ptime = ((long long)PAPI_get_virt_usec() - EMPI_GLOBAL_PAPI_ptime_init); // We also include the communication time
-	
+    
     //computation time
     EMPI_GLOBAL_tcomp += (double)(*rtime * 1.0E-6);
 
     //communication time
     *ctime = (EMPI_GLOBAL_tcomm - EMPI_GLOBAL_tcomm_itinit);
-	// IO time
-	*iotime=(EMPI_GLOBAL_tio- EMPI_GLOBAL_tio_itinit);
+    // IO time
+    *iotime=(EMPI_GLOBAL_tio- EMPI_GLOBAL_tio_itinit);
     //PAPI read FLOPS and counters
     PAPI_read (EMPI_GLOBAL_PAPI_eventSet, values);
-	
-	// Reads HW counter values
+    
+    // Reads HW counter values
     *flops  = values[0];
     *hwpc_1 = values[1];
     *hwpc_2 = values[2];
@@ -431,8 +431,8 @@ void EMPI_Monitor_init () {
         }
 
 
-		
-		
+        
+        
         //add floating point operations
         //if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, PAPI_FP_OPS)) != PAPI_OK ){
         if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, PAPI_TOT_INS)) != PAPI_OK ){
@@ -472,7 +472,7 @@ void EMPI_Monitor_init () {
         }
 
         //add event eventcode_hwpc_1
-		if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_1, &eventcode_hwpc_1 )) != PAPI_OK){
+        if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_1, &eventcode_hwpc_1 )) != PAPI_OK){
             printf("Monitoring: Error adding event hwpc_1\n");
             switch(retval){
                 case PAPI_EINVAL:
@@ -502,49 +502,49 @@ void EMPI_Monitor_init () {
                 case PAPI_EBUG:
                     printf("Error is PAPI_EBUG\n");
                 break;
-			}
-		}   			
-		else {		
-			if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_1)) != PAPI_OK){
-				printf("Monitoring: Error adding hwpc_1\n");
-				switch(retval){
-					case PAPI_EINVAL:
-						printf("Error is PAPI_EINVAL\n");
-					break;
+            }
+        }               
+        else {        
+            if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_1)) != PAPI_OK){
+                printf("Monitoring: Error adding hwpc_1\n");
+                switch(retval){
+                    case PAPI_EINVAL:
+                        printf("Error is PAPI_EINVAL\n");
+                    break;
 
-					case PAPI_ENOMEM:
-						printf("Error is PAPI_ENOMEM\n");
-					break;
+                    case PAPI_ENOMEM:
+                        printf("Error is PAPI_ENOMEM\n");
+                    break;
 
-					case PAPI_ENOEVST:
-						printf("Error is PAPI_ENOEVST\n");
-					break;
+                    case PAPI_ENOEVST:
+                        printf("Error is PAPI_ENOEVST\n");
+                    break;
 
-					case PAPI_EISRUN:
-						printf("Error is PAPI_EISRUN\n");
-					break;
+                    case PAPI_EISRUN:
+                        printf("Error is PAPI_EISRUN\n");
+                    break;
 
-					case PAPI_ECNFLCT:
-						printf("Error is PAPI_ECNFLCT\n");
-					break;
+                    case PAPI_ECNFLCT:
+                        printf("Error is PAPI_ECNFLCT\n");
+                    break;
 
-					case PAPI_ENOEVNT:
-						printf("Error is PAPI_ENOEVNT\n");
-					break;
+                    case PAPI_ENOEVNT:
+                        printf("Error is PAPI_ENOEVNT\n");
+                    break;
 
-					case PAPI_EBUG:
-						printf("Error is PAPI_EBUG\n");
-					break;
+                    case PAPI_EBUG:
+                        printf("Error is PAPI_EBUG\n");
+                    break;
 
-				}
-			} else {
-				num_events++;
-			}
-		}
-		
-		
+                }
+            } else {
+                num_events++;
+            }
+        }
+        
+        
         //add event eventcode_hwpc_2
-		if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_2 )) != PAPI_OK){
+        if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_2 )) != PAPI_OK){
             printf("Monitoring: Error adding event hwpc_2\n");
             switch(retval){
                 case PAPI_EINVAL:
@@ -574,47 +574,47 @@ void EMPI_Monitor_init () {
                 case PAPI_EBUG:
                     printf("Error is PAPI_EBUG\n");
                 break;
-			}
-		}   			
-		else{
-			if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2)) != PAPI_OK){
-				printf("Monitoring: Error adding hwpc_2\n");
-				switch(retval){
-					case PAPI_EINVAL:
-						printf("Error is PAPI_EINVAL\n");
-					break;
+            }
+        }               
+        else{
+            if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2)) != PAPI_OK){
+                printf("Monitoring: Error adding hwpc_2\n");
+                switch(retval){
+                    case PAPI_EINVAL:
+                        printf("Error is PAPI_EINVAL\n");
+                    break;
 
-					case PAPI_ENOMEM:
-						printf("Error is PAPI_ENOMEM\n");
-					break;
+                    case PAPI_ENOMEM:
+                        printf("Error is PAPI_ENOMEM\n");
+                    break;
 
-					case PAPI_ENOEVST:
-						printf("Error is PAPI_ENOEVST\n");
-					break;
+                    case PAPI_ENOEVST:
+                        printf("Error is PAPI_ENOEVST\n");
+                    break;
 
-					case PAPI_EISRUN:
-						printf("Error is PAPI_EISRUN\n");
-					break;
+                    case PAPI_EISRUN:
+                        printf("Error is PAPI_EISRUN\n");
+                    break;
 
-					case PAPI_ECNFLCT:
-						printf("Error is PAPI_ECNFLCT\n");
-					break;
+                    case PAPI_ECNFLCT:
+                        printf("Error is PAPI_ECNFLCT\n");
+                    break;
 
-					case PAPI_ENOEVNT:
-						printf("Error is PAPI_ENOEVNT\n");
-					break;
+                    case PAPI_ENOEVNT:
+                        printf("Error is PAPI_ENOEVNT\n");
+                    break;
 
-					case PAPI_EBUG:
-						printf("Error is PAPI_EBUG\n");
-					break;
+                    case PAPI_EBUG:
+                        printf("Error is PAPI_EBUG\n");
+                    break;
 
-				}
-			} else {
-				num_events++;
-			}
-		}
-		
-		
+                }
+            } else {
+                num_events++;
+            }
+        }
+        
+        
         //start counting
         if((retval = PAPI_start (EMPI_GLOBAL_PAPI_eventSet)) != PAPI_OK){
             printf("Monitoring: Error starting count\n");
@@ -657,7 +657,7 @@ void EMPI_Monitor_init () {
 
         //initialize variables
         EMPI_GLOBAL_tcomp          = EMPI_GLOBAL_tcomm = 0;
-		EMPI_GLOBAL_tio = 0;
+        EMPI_GLOBAL_tio = 0;
         EMPI_GLOBAL_iterative_ini  = MPI_Wtime();
 
     }
@@ -682,16 +682,16 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
     //TODO: Schedule load balance accoridng to flag
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Monitor_end in <%s> ***\n", __FILE__);
-		fflush(NULL);
+        fflush(NULL);
     #endif
 
     long long rtime = 0.0, ptime = 0.0, flops = 0.0, hwpc_1 = 0.0, hwpc_2 = 0.0;
 
     double ctime = 0.0,iotime=0.0;
-	size_t len0,len1;
+    size_t len0,len1;
     int n = 0,new_PAPI_policy=0;
-	long long values[3] = {0, 0, 0};
-	int eventcode_hwpc_1,eventcode_hwpc_2,bsize;
+    long long values[3] = {0, 0, 0};
+    int eventcode_hwpc_1,eventcode_hwpc_2,bsize;
     
     MPI_Status status;
 
@@ -706,7 +706,7 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
 
     //Iteration end
     EMPI_Iteration_end (&rtime, &ptime, &flops, &hwpc_1, &hwpc_2, &ctime,&iotime);
-	
+    
     //if(*rank == EMPI_root && (iter % EMPI_GLOBAL_niter) == 0) printf("l940\t it = %d \t %lld\t %lld\t %lld\n", iter, flops, hwpc_1, rtime);
     //printf("[DEBUG] monitornig values for iteration %d: %lld %lld %lld\n", flops, hwpc_1, hwpc_2);
     //printf("[DEBUG] Energy values for iteration %d: %lf %lf %lf %lf\n", iter, EMPI_GLOBAL_ENERGY_values[0], EMPI_GLOBAL_ENERGY_values_power[0], EMPI_GLOBAL_ENERGY_values[1], EMPI_GLOBAL_ENERGY_values_power[1]);
@@ -715,7 +715,7 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
     //Overhead time of the monitor function
     EMPI_GLOBAL_tover_ini = PAPI_get_real_usec();
 
-	
+    
     //Estructura de coste
     if ((*rank == EMPI_root)&&(EMPI_GLOBAL_initnc == EMPI_TRUE)) {
 
@@ -765,8 +765,8 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
         EMPI_GLOBAL_PAPI_hwpc_1  += hwpc_1;
         EMPI_GLOBAL_PAPI_hwpc_2  += hwpc_2;
         EMPI_GLOBAL_tcomm_interval += ctime;
-		EMPI_GLOBAL_tio_interval   += iotime;
-		
+        EMPI_GLOBAL_tio_interval   += iotime;
+        
         if ((iter > 0)&&((iter % EMPI_GLOBAL_niter) == 0)) {
 
             if (*rank == EMPI_root) {
@@ -806,8 +806,8 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
         EMPI_GLOBAL_PAPI_flops_iteration += flops;
         EMPI_GLOBAL_PAPI_real_flops_iteration += hwpc_1;
         EMPI_GLOBAL_PAPI_it_time += rtime;
-		EMPI_GLOBAL_tio_interval   += iotime;
-		
+        EMPI_GLOBAL_tio_interval   += iotime;
+        
         //set variables
         EMPI_GLOBAL_PAPI_rtime_lb += rtime;
         EMPI_GLOBAL_PAPI_ptime_lb += ptime;
@@ -815,8 +815,8 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
         EMPI_GLOBAL_PAPI_hwpc_1_lb  += hwpc_1;
         EMPI_GLOBAL_PAPI_hwpc_2_lb  += hwpc_2;
         EMPI_GLOBAL_tcomm_interval_lb += ctime;
-		
-		
+        
+        
        if ((iter > 0)&&((iter % EMPI_GLOBAL_niter) == 0)) {
 
             if (*rank == EMPI_root) {
@@ -888,163 +888,163 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
             monitor.hostid  = EMPI_GLOBAL_hostid;
             monitor.flops_iteration = EMPI_GLOBAL_PAPI_flops;
             monitor.it_time = EMPI_GLOBAL_PAPI_rtime;
-			monitor.hwpc_1  = EMPI_GLOBAL_PAPI_hwpc_1;
-			monitor.hwpc_2  = EMPI_GLOBAL_PAPI_hwpc_2;
-			monitor.iotime	= EMPI_GLOBAL_tio_interval;
-			len0=strlen(monitor.nhwpc_1)+1;
-			len1=strlen(monitor.nhwpc_2)+1;
-			
-			
-			// Only rank0 access to the server
-			if(*rank == EMPI_root){
-				// We need to protect it because the server access to EMPI_GLOBAL_PAPI_nhwpc_* when option 7 is used
-				pthread_mutex_lock(&EMPI_GLOBAL_server_lock); // Only the server has an attached thread
+            monitor.hwpc_1  = EMPI_GLOBAL_PAPI_hwpc_1;
+            monitor.hwpc_2  = EMPI_GLOBAL_PAPI_hwpc_2;
+            monitor.iotime    = EMPI_GLOBAL_tio_interval;
+            len0=strlen(monitor.nhwpc_1)+1;
+            len1=strlen(monitor.nhwpc_2)+1;
+            
+            
+            // Only rank0 access to the server
+            if(*rank == EMPI_root){
+                // We need to protect it because the server access to EMPI_GLOBAL_PAPI_nhwpc_* when option 7 is used
+                pthread_mutex_lock(&EMPI_GLOBAL_server_lock); // Only the server has an attached thread
 
-					// This works for the rank=0 process. Detects if there are PAPI event values
-					if (strncmp(EMPI_GLOBAL_PAPI_nhwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_1,len0)!=0 || strncmp(EMPI_GLOBAL_PAPI_nhwpc_2,EMPI_GLOBAL_monitoring_data.nhwpc_2,len1)!=0){
-						new_PAPI_policy=1;	
-					}
-					else{
-						new_PAPI_policy=0;	
-					}
-								
-								
-					// Rank0 adquires the PAPI event names 
-					memcpy(monitor.nhwpc_1,EMPI_GLOBAL_PAPI_nhwpc_1,(size_t)EMPI_Monitor_string_size);
-					memcpy(monitor.nhwpc_2,EMPI_GLOBAL_PAPI_nhwpc_2,(size_t)EMPI_Monitor_string_size);
-					
-					// Rank 0 adquires the PAPI the core binding status
-					monitor.corebinding=EMPI_GLOBAL_corebinding;
-					
-					// Rank 0 adquires the termination condition
-					monitor.termination=EMPI_GLOBAL_monitoring_data.termination;
+                    // This works for the rank=0 process. Detects if there are PAPI event values
+                    if (strncmp(EMPI_GLOBAL_PAPI_nhwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_1,len0)!=0 || strncmp(EMPI_GLOBAL_PAPI_nhwpc_2,EMPI_GLOBAL_monitoring_data.nhwpc_2,len1)!=0){
+                        new_PAPI_policy=1;    
+                    }
+                    else{
+                        new_PAPI_policy=0;    
+                    }
+                                
+                                
+                    // Rank0 adquires the PAPI event names 
+                    memcpy(monitor.nhwpc_1,EMPI_GLOBAL_PAPI_nhwpc_1,(size_t)EMPI_Monitor_string_size);
+                    memcpy(monitor.nhwpc_2,EMPI_GLOBAL_PAPI_nhwpc_2,(size_t)EMPI_Monitor_string_size);
+                    
+                    // Rank 0 adquires the PAPI the core binding status
+                    monitor.corebinding=EMPI_GLOBAL_corebinding;
                     
                     // Rank 0 adquires the termination condition
-					monitor.lbalance=EMPI_GLOBAL_monitoring_data.lbalance;
-					
-				pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
-			}
-			
+                    monitor.termination=EMPI_GLOBAL_monitoring_data.termination;
+                    
+                    // Rank 0 adquires the termination condition
+                    monitor.lbalance=EMPI_GLOBAL_monitoring_data.lbalance;
+                    
+                pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+            }
+            
             
             //monitoring data            
             PMPI_Allgather (&monitor, 1, EMPI_Monitor_Datatype, smonitor, 1, EMPI_Monitor_Datatype, EMPI_COMM_WORLD);           
 
             
-			// Check for termination condition (case 5 in command_listener)
-			if(smonitor[0].termination==1){
-				MPI_Finalize();
-				exit(0);
-			}
+            // Check for termination condition (case 5 in command_listener)
+            if(smonitor[0].termination==1){
+                MPI_Finalize();
+                exit(0);
+            }
 
-			len0=strlen(smonitor[0].nhwpc_1)+1;
-			len1=strlen(smonitor[0].nhwpc_2)+1;
+            len0=strlen(smonitor[0].nhwpc_1)+1;
+            len1=strlen(smonitor[0].nhwpc_2)+1;
 
-			// If there are new PAPI events it is necessary to reinitialize PAPI
-			if (new_PAPI_policy==1 ||strncmp(EMPI_GLOBAL_PAPI_nhwpc_1,smonitor[0].nhwpc_1,len0)!=0 || strncmp(EMPI_GLOBAL_PAPI_nhwpc_2,smonitor[0].nhwpc_2,len1)!=0) {
+            // If there are new PAPI events it is necessary to reinitialize PAPI
+            if (new_PAPI_policy==1 ||strncmp(EMPI_GLOBAL_PAPI_nhwpc_1,smonitor[0].nhwpc_1,len0)!=0 || strncmp(EMPI_GLOBAL_PAPI_nhwpc_2,smonitor[0].nhwpc_2,len1)!=0) {
 
 
-				#if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-					fprintf (stdout, "\n*** DEBUG_MSG:: Restarting PAPI for using new event values <%s> ***\n", __FILE__);
-					fflush(NULL);
-				#endif
-				
-				EMPI_GLOBAL_PAPI_init = EMPI_FALSE;  // Forces PAPI restart
-				
-				//PAPI stop
-				PAPI_stop (EMPI_GLOBAL_PAPI_eventSet, values);
+                #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
+                    fprintf (stdout, "\n*** DEBUG_MSG:: Restarting PAPI for using new event values <%s> ***\n", __FILE__);
+                    fflush(NULL);
+                #endif
+                
+                EMPI_GLOBAL_PAPI_init = EMPI_FALSE;  // Forces PAPI restart
+                
+                //PAPI stop
+                PAPI_stop (EMPI_GLOBAL_PAPI_eventSet, values);
 
-				//PAPI remove event
-				PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, PAPI_FP_OPS);
+                //PAPI remove event
+                PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, PAPI_FP_OPS);
 
-				//PAPI remove event
-				PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_1 );
-				PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_1);
+                //PAPI remove event
+                PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_1 );
+                PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_1);
 
-				//PAPI remove event
-				PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_2 );
-				PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2);
-				
-				// Updates the new monitoring metrics using the root values
-				memcpy(EMPI_GLOBAL_PAPI_nhwpc_1,smonitor[0].nhwpc_1,(size_t)EMPI_Monitor_string_size);
-				memcpy(EMPI_GLOBAL_PAPI_nhwpc_2,smonitor[0].nhwpc_2,(size_t)EMPI_Monitor_string_size);				
-			}
+                //PAPI remove event
+                PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_2 );
+                PAPI_remove_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2);
+                
+                // Updates the new monitoring metrics using the root values
+                memcpy(EMPI_GLOBAL_PAPI_nhwpc_1,smonitor[0].nhwpc_1,(size_t)EMPI_Monitor_string_size);
+                memcpy(EMPI_GLOBAL_PAPI_nhwpc_2,smonitor[0].nhwpc_2,(size_t)EMPI_Monitor_string_size);                
+            }
             
             // Detects whether a global load balance operation has to be performed in the next callo
             if(smonitor[0].lbalance == 1){
                 EMPI_GLOBAL_perform_load_balance=1;
             }
             
-			// Performs the core binding
-			if(smonitor[0].corebinding==1){
-				cpu_set_t mask;
-				char path[1000];
-				char shell_cmd[100];
-				FILE *fp;
-				char processor_name[MPI_MAX_PROCESSOR_NAME];
-				int namelen;
+            // Performs the core binding
+            if(smonitor[0].corebinding==1){
+                cpu_set_t mask;
+                char path[1000];
+                char shell_cmd[100];
+                FILE *fp;
+                char processor_name[MPI_MAX_PROCESSOR_NAME];
+                int namelen;
 
-				// Unserts the variable
-				pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
-				EMPI_GLOBAL_corebinding=0;
- 				pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
-				
-				MPI_Get_processor_name(processor_name, &namelen);
-				sprintf(shell_cmd, "cat /proc/%d/stat | awk '{print $39}'", getpid());
-				fp = popen(shell_cmd, "r");
-				while (fgets(path, 1000, fp) != NULL) {
-					printf("%s[%d]: before running on CPU %s", processor_name, *rank, path);
-				}
-				pclose(fp);
-				
-				bsize=EMPI_max_process*32; // 32 is the maximum number of cores, that is, the lenght of the binding-list per process 
-				
-				MPI_Bcast(EMPI_GLOBAL_corebindlist,bsize, MPI_INT, EMPI_root, MPI_COMM_WORLD);
-				  
-				// Core binding
-				if (EMPI_GLOBAL_corebindlist[*rank][0]>0){
-					CPU_ZERO(&mask);
-					for(n=0;n<EMPI_GLOBAL_corebindlist[*rank][0];n++){						
-						CPU_SET(EMPI_GLOBAL_corebindlist[*rank][n+1], &mask);
-					}
-					sched_setaffinity(0, sizeof(cpu_set_t), &mask);
-				}
-				
-				sprintf(shell_cmd, "cat /proc/%d/stat | awk '{print $39}'", getpid());
-				fp = popen(shell_cmd, "r");
-				while (fgets(path, 1000, fp) != NULL) {
-					printf("%s[%d]: after running on CPU %s", processor_name, *rank, path);
-				}
-				pclose(fp);
-				
-			}
-			
+                // Unserts the variable
+                pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
+                EMPI_GLOBAL_corebinding=0;
+                 pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
+                
+                MPI_Get_processor_name(processor_name, &namelen);
+                sprintf(shell_cmd, "cat /proc/%d/stat | awk '{print $39}'", getpid());
+                fp = popen(shell_cmd, "r");
+                while (fgets(path, 1000, fp) != NULL) {
+                    printf("%s[%d]: before running on CPU %s", processor_name, *rank, path);
+                }
+                pclose(fp);
+                
+                bsize=EMPI_max_process*32; // 32 is the maximum number of cores, that is, the lenght of the binding-list per process 
+                
+                MPI_Bcast(EMPI_GLOBAL_corebindlist,bsize, MPI_INT, EMPI_root, MPI_COMM_WORLD);
+                  
+                // Core binding
+                if (EMPI_GLOBAL_corebindlist[*rank][0]>0){
+                    CPU_ZERO(&mask);
+                    for(n=0;n<EMPI_GLOBAL_corebindlist[*rank][0];n++){                        
+                        CPU_SET(EMPI_GLOBAL_corebindlist[*rank][n+1], &mask);
+                    }
+                    sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+                }
+                
+                sprintf(shell_cmd, "cat /proc/%d/stat | awk '{print $39}'", getpid());
+                fp = popen(shell_cmd, "r");
+                while (fgets(path, 1000, fp) != NULL) {
+                    printf("%s[%d]: after running on CPU %s", processor_name, *rank, path);
+                }
+                pclose(fp);
+                
+            }
+            
 
-			// ToDo: check if it has to be only executed by rank 0 process
+            // ToDo: check if it has to be only executed by rank 0 process
             // Copies to the global variable the monitoring information. This global variable is used by the server to send the data via sockets
             pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
-			
-			EMPI_GLOBAL_monitoring_data = smonitor[0]; // All the threads use the monitor variable of rank0. Including the termination condition
-			// Note: 14 lines ahead the perf. counter values are replaced by the process spawn/removal overheads
-			
-			// Aggregates the data of all the processes
-			for(n=1;n<*size;n++){
-			  EMPI_GLOBAL_monitoring_data.flops +=smonitor[n].flops;
-			  //EMPI_GLOBAL_monitoring_data.rtime +=smonitor[n].rtime;
-			  //EMPI_GLOBAL_monitoring_data.ptime +=smonitor[n].ptime;
-			  //EMPI_GLOBAL_monitoring_data.ctime +=smonitor[n].ctime;
-			  EMPI_GLOBAL_monitoring_data.flops_iteration +=smonitor[n].flops_iteration;
-			  EMPI_GLOBAL_monitoring_data.hwpc_1 +=smonitor[n].hwpc_1;
-			  EMPI_GLOBAL_monitoring_data.hwpc_2 +=smonitor[n].hwpc_2;	  
-			}
-			
-			// Overwrites the monitoring metrics with process spawn/removal overheads
-			EMPI_GLOBAL_monitoring_data.hwpc_1=(long long int)ceil(EMPI_GLOBAL_lastoverhead_processes*1000); // In ms
-			EMPI_GLOBAL_monitoring_data.hwpc_2=(long long int)ceil(EMPI_GLOBAL_lastoverhead_rdata*1000); 	 // In ms
-			strcpy(EMPI_GLOBAL_monitoring_data.nhwpc_1,"ProcessOverhead");
-			strcpy(EMPI_GLOBAL_monitoring_data.nhwpc_2,"DataRedistOverhead");
             
-			EMPI_GLOBAL_monitoring_data.lbalance = 0; // Resets the counter
-						
+            EMPI_GLOBAL_monitoring_data = smonitor[0]; // All the threads use the monitor variable of rank0. Including the termination condition
+            // Note: 14 lines ahead the perf. counter values are replaced by the process spawn/removal overheads
+            
+            // Aggregates the data of all the processes
+            for(n=1;n<*size;n++){
+              EMPI_GLOBAL_monitoring_data.flops +=smonitor[n].flops;
+              //EMPI_GLOBAL_monitoring_data.rtime +=smonitor[n].rtime;
+              //EMPI_GLOBAL_monitoring_data.ptime +=smonitor[n].ptime;
+              //EMPI_GLOBAL_monitoring_data.ctime +=smonitor[n].ctime;
+              EMPI_GLOBAL_monitoring_data.flops_iteration +=smonitor[n].flops_iteration;
+              EMPI_GLOBAL_monitoring_data.hwpc_1 +=smonitor[n].hwpc_1;
+              EMPI_GLOBAL_monitoring_data.hwpc_2 +=smonitor[n].hwpc_2;      
+            }
+            
+            // Overwrites the monitoring metrics with process spawn/removal overheads
+            EMPI_GLOBAL_monitoring_data.hwpc_1=(long long int)ceil(EMPI_GLOBAL_lastoverhead_processes*1000); // In ms
+            EMPI_GLOBAL_monitoring_data.hwpc_2=(long long int)ceil(EMPI_GLOBAL_lastoverhead_rdata*1000);      // In ms
+            strcpy(EMPI_GLOBAL_monitoring_data.nhwpc_1,"ProcessOverhead");
+            strcpy(EMPI_GLOBAL_monitoring_data.nhwpc_2,"DataRedistOverhead");
+            
+            EMPI_GLOBAL_monitoring_data.lbalance = 0; // Resets the counter
+                        
             pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 
             int n, sflops;
@@ -1136,7 +1136,7 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
                     EMPI_Monitor_malleability_conditional (rank, size, iter, maxiter, *count, *disp, smonitor, fc, argv, bin);
 
                     break;
-					
+                    
                 case EMPI_MALLEABILITY_TRIG:
 
                     //conditional malleability
@@ -1157,15 +1157,15 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
 
             }
 
-			// David
-			if (*rank == EMPI_root) printf ("Iter: %d \t FLOPs: %lld \t MFLOPS:: %lf \t RTIME:: %lf \t PTIME:: %lf \t CTIME:: %lf \t IOTime:: %lf \t Size: %i\n", iter, smonitor[0].flops, (double)((double)smonitor[0].flops)/((double)smonitor[0].rtime), ((double)smonitor[0].rtime)/1000000,((double)smonitor[0].ptime)/1000000, smonitor[0].ctime, smonitor[0].iotime, *size);
+            // David
+            if (*rank == EMPI_root) printf ("Iter: %d \t FLOPs: %lld \t MFLOPS:: %lf \t RTIME:: %lf \t PTIME:: %lf \t CTIME:: %lf \t IOTime:: %lf \t Size: %i\n", iter, smonitor[0].flops, (double)((double)smonitor[0].flops)/((double)smonitor[0].rtime), ((double)smonitor[0].rtime)/1000000,((double)smonitor[0].ptime)/1000000, smonitor[0].ctime, smonitor[0].iotime, *size);
 
             //reset variables
             EMPI_GLOBAL_PAPI_rtime = EMPI_GLOBAL_PAPI_ptime = EMPI_GLOBAL_PAPI_flops = EMPI_GLOBAL_PAPI_hwpc_1 = EMPI_GLOBAL_PAPI_hwpc_2 = 0;
             
             EMPI_GLOBAL_tcomm_interval = EMPI_GLOBAL_tio_interval = 0;
-			
-			//if(*rank == EMPI_root)  printf("END EMPI_GLOBAL_PAPI_flops is %lld, EMPI_GLOBAL_PAPI_flops_iteration is %lld\n", EMPI_GLOBAL_PAPI_flops, EMPI_GLOBAL_PAPI_flops_iteration);
+            
+            //if(*rank == EMPI_root)  printf("END EMPI_GLOBAL_PAPI_flops is %lld, EMPI_GLOBAL_PAPI_flops_iteration is %lld\n", EMPI_GLOBAL_PAPI_flops, EMPI_GLOBAL_PAPI_flops_iteration);
 
             free (smonitor);
 
@@ -1902,7 +1902,7 @@ static void EMPI_Monitor_efficiency_irregular (int *rank, int *size, int iter, i
         //Estimated costs for the execution on the current configuration for one sampling interval
         //Computation estimated cost
         comp_cost = (EMPI_GLOBAL_profile_flops[iter/EMPI_GLOBAL_niter]*1.0E-6*flop_factor) / (sdflops * comp_factor);
-		
+        
         //Communication estimated cost
         EMPI_Comm_cost (&comm_cost, EMPI_GLOBAL_minprocs, *size, EMPI_GLOBAL_niter);
 
@@ -3837,8 +3837,8 @@ static void EMPI_Monitor_malleability_conditional (int *rank, int *size, int ite
         }
 
         //Bcast newsize and mflops
-		if(*rank == EMPI_root) printf("\n ===> %d %d", reconfig[0], reconfig[1]);
-		
+        if(*rank == EMPI_root) printf("\n ===> %d %d", reconfig[0], reconfig[1]);
+        
         PMPI_Bcast (reconfig, 2, MPI_INT, EMPI_root, EMPI_COMM_WORLD);
         EMPI_GLOBAL_overhead_rpolicy += (MPI_Wtime() - tini);
 
@@ -3905,12 +3905,12 @@ static void EMPI_Monitor_malleability_triggered (int *rank, int *size, int iter,
 
     EMPI_host_type *hostlist = NULL;
 
-	
-	pthread_mutex_lock(&EMPI_GLOBAL_server_lock); // David: global lock
+    
+    pthread_mutex_lock(&EMPI_GLOBAL_server_lock); // David: global lock
 
     // Always checks and broadcasts the new created/destroyed processes
-	if(1) { 
-		
+    if(1) { 
+        
         tini = MPI_Wtime();
 
         // if EMPI_GLOBAL_listrm[0] is 1, the action is performed inmediately, otherwise,  when the iteration is reached
@@ -3980,8 +3980,8 @@ static void EMPI_Monitor_malleability_triggered (int *rank, int *size, int iter,
 
                 //minimum execution time
                 min_xtime = stime;
-				
-				p=totprocs;
+                
+                p=totprocs;
 
                 //mflops de los primeros n procesos mas potentes
                 for (n = 0; n < p; n ++) mflops += imflops[n];
@@ -4004,14 +4004,14 @@ static void EMPI_Monitor_malleability_triggered (int *rank, int *size, int iter,
                 omflops = mflops;
 
                 min_xtime = xtime;
-					
-					
-				
+                    
+                    
+                
 
                 free (imflops);
                 imflops = NULL;
-				
-				
+                
+                
 
                 newsize = mflops = 0;
 
@@ -4159,11 +4159,11 @@ static void EMPI_Monitor_malleability_triggered (int *rank, int *size, int iter,
                 reconfig[0] = 0;
                 reconfig[1] = 0;        
         }
-        //Bcast newsize and mflops		
+        //Bcast newsize and mflops        
         PMPI_Bcast (reconfig, 2, MPI_INT, EMPI_root, EMPI_COMM_WORLD);
 
         EMPI_GLOBAL_overhead_rpolicy += (MPI_Wtime() - tini);
-		
+        
         //get newsize and mflops
         newsize = reconfig[0];
         mflops = reconfig[1];
@@ -4173,11 +4173,11 @@ static void EMPI_Monitor_malleability_triggered (int *rank, int *size, int iter,
         if (newsize > *size) {
 
             //spawn processes
-			
+            
             EMPI_Monitor_spawn (rank, size, (newsize-*size), count, disp, argv, bin, smonitor, hostid, fc);
 
         } 
-		else if ((newsize < *size)&&(newsize > 0)) {
+        else if ((newsize < *size)&&(newsize > 0)) {
 
             if (*rank > EMPI_root) {
                 rremvs = (int*) malloc ((*size-newsize) * sizeof(int));
@@ -4190,12 +4190,12 @@ static void EMPI_Monitor_malleability_triggered (int *rank, int *size, int iter,
             //remove processes
             EMPI_Monitor_remove (rank, size, (*size-newsize), count, disp, smonitor, rremvs, fc);
         }
-		else{
-			// David
-			//int lbalance = EMPI_NULL;
-			//if (EMPI_GLOBAL_lbalance == EMPI_TRUE) lbalance = EMPI_LBalance (rank, size, count, disp, fc, smonitor);
-			// David		
-		}
+        else{
+            // David
+            //int lbalance = EMPI_NULL;
+            //if (EMPI_GLOBAL_lbalance == EMPI_TRUE) lbalance = EMPI_LBalance (rank, size, count, disp, fc, smonitor);
+            // David        
+        }
         if (hostid != NULL) free (hostid);
         if (rremvs != NULL) free (rremvs);
     } else {
@@ -4205,13 +4205,13 @@ static void EMPI_Monitor_malleability_triggered (int *rank, int *size, int iter,
         if (EMPI_GLOBAL_lbalance == EMPI_TRUE) lbalance = EMPI_LBalance (rank, size, count, disp, fc, smonitor);
     }
 
-	// David: Resets the trigger to not produce any action until it is set again
-	if(EMPI_GLOBAL_listrm[0] == 1 ||  iter >= EMPI_GLOBAL_listrm[0] ){
+    // David: Resets the trigger to not produce any action until it is set again
+    if(EMPI_GLOBAL_listrm[0] == 1 ||  iter >= EMPI_GLOBAL_listrm[0] ){
          EMPI_GLOBAL_listrm[0] = 0;
     
-         for (n = 0; n < EMPI_GLOBAL_nhclasses; n ++) EMPI_GLOBAL_nprocs_class[0][n]=0;	
+         for (n = 0; n < EMPI_GLOBAL_nhclasses; n ++) EMPI_GLOBAL_nprocs_class[0][n]=0;    
     }
-	pthread_mutex_unlock(&EMPI_GLOBAL_server_lock); // David global unlock
+    pthread_mutex_unlock(&EMPI_GLOBAL_server_lock); // David global unlock
 
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
@@ -4499,7 +4499,7 @@ static void EMPI_Comp_cost (double *cost_flops, double *cost_time, long long *fl
     //cost: cost of the new configuration
     *cost_flops = (double)((*flop / mflops) * 1.0E-6);
     *cost_time = (double)((scost/newsize) * 1.0E-6);
-	
+    
     *flop = (*flop * 1.0E-6);
 
     //debug
@@ -4518,7 +4518,7 @@ void EMPI_Capture_comms (int mpi_op, int *datasize, MPI_Datatype datatype) {
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Capture_comms in <%s> ***\n", __FILE__);
-		fflush(NULL);
+        fflush(NULL);
     #endif
 
     int rank;
@@ -4707,24 +4707,24 @@ static void EMPI_Monitor_spawn (int *rank, int *size, int nprocs, int count, int
     EMPI_LBalance_spawn (*rank, *size, (*size+nprocs), &rcount, &rdispl, countdispl, countdispl+(*size+nprocs), smonitor, stflops, fc);
 
     EMPI_GLOBAL_overhead_lbalance += (MPI_Wtime() - tini);
-	dt_lb=(MPI_Wtime() - tini);
-	
+    dt_lb=(MPI_Wtime() - tini);
+    
     tini = MPI_Wtime();
 
     //TODO: este NULL es el info. Creo que hay que recibirlo en Monitor_end
     //spawn new processes in host (id)
     //check size of allocated region
 
-	// Begin Clarisse Control point
-	/*
-	printf("  Native process [%d] Clarisse control point reached \n",*rank);
-	extern MPI_File fh;
-	int err;
-	err = MPI_File_close(&fh);
+    // Begin Clarisse Control point
+    /*
+    printf("  Native process [%d] Clarisse control point reached \n",*rank);
+    extern MPI_File fh;
+    int err;
+    err = MPI_File_close(&fh);
     if (err != MPI_SUCCESS) printf(" Native processs [%d]: error closing file \n",*rank);
-	cls_server_disconnect();
-	*/
-	// End Clarisse Control point
+    cls_server_disconnect();
+    */
+    // End Clarisse Control point
 
     EMPI_Spawn (nprocs, argv, bin, hostid, NULL);
 
@@ -4732,9 +4732,9 @@ static void EMPI_Monitor_spawn (int *rank, int *size, int nprocs, int count, int
 
     // printf("Spawn cost is %f seconds\n", tend_aux - tini);
 
- 	EMPI_GLOBAL_lastoverhead_processes=(tend_aux - tini);
+     EMPI_GLOBAL_lastoverhead_processes=(tend_aux - tini);
     EMPI_GLOBAL_overhead_processes += EMPI_GLOBAL_lastoverhead_processes;
-	
+    
     //Bcast vcounts and displs
     PMPI_Bcast (countdispl, ((*size+nprocs)*2), MPI_INT, EMPI_root, EMPI_COMM_WORLD);
 
@@ -4748,30 +4748,30 @@ static void EMPI_Monitor_spawn (int *rank, int *size, int nprocs, int count, int
 
     //redistribute data
     EMPI_Rdata (count, disp, rcount, rdispl);
-	EMPI_GLOBAL_lastoverhead_rdata=MPI_Wtime() - tini;
+    EMPI_GLOBAL_lastoverhead_rdata=MPI_Wtime() - tini;
     EMPI_GLOBAL_overhead_rdata += EMPI_GLOBAL_lastoverhead_rdata;
-	
-	// Begin Clarisse Control point
-	/*
-	cls_set_client_intracomm(EMPI_COMM_WORLD);
-	MPI_Barrier(EMPI_COMM_WORLD);
-	cls_server_connect();
-	//char file[100];
-	//sprintf(file,"abc\_%d\n",*size); // ToDo:: remove
-	//printf("\n Native:: %s",file);
-	if(*size==2)	err = MPI_File_open(EMPI_COMM_WORLD, "abc_2", MPI_MODE_CREATE | MPI_MODE_RDWR ,	MPI_INFO_NULL, &fh); // It should happend 
-	if(*size==3)	err = MPI_File_open(EMPI_COMM_WORLD, "abc_3", MPI_MODE_CREATE | MPI_MODE_RDWR ,	MPI_INFO_NULL, &fh); // It should happend 
-	if(*size==4)	err = MPI_File_open(EMPI_COMM_WORLD, "abc_4", MPI_MODE_CREATE | MPI_MODE_RDWR ,	MPI_INFO_NULL, &fh); // It should happend 
-	if (err != MPI_SUCCESS)	printf(" Native processs [%d]: error opening file \n",*rank);
-	*/
-	// End Clarisse Control point
-		
+    
+    // Begin Clarisse Control point
+    /*
+    cls_set_client_intracomm(EMPI_COMM_WORLD);
+    MPI_Barrier(EMPI_COMM_WORLD);
+    cls_server_connect();
+    //char file[100];
+    //sprintf(file,"abc\_%d\n",*size); // ToDo:: remove
+    //printf("\n Native:: %s",file);
+    if(*size==2)    err = MPI_File_open(EMPI_COMM_WORLD, "abc_2", MPI_MODE_CREATE | MPI_MODE_RDWR ,    MPI_INFO_NULL, &fh); // It should happend 
+    if(*size==3)    err = MPI_File_open(EMPI_COMM_WORLD, "abc_3", MPI_MODE_CREATE | MPI_MODE_RDWR ,    MPI_INFO_NULL, &fh); // It should happend 
+    if(*size==4)    err = MPI_File_open(EMPI_COMM_WORLD, "abc_4", MPI_MODE_CREATE | MPI_MODE_RDWR ,    MPI_INFO_NULL, &fh); // It should happend 
+    if (err != MPI_SUCCESS)    printf(" Native processs [%d]: error opening file \n",*rank);
+    */
+    // End Clarisse Control point
+        
 
 
     if (*rank == EMPI_root) {
         printf ("Spawn cost:: process_creation= %f \t data_redistribution= %f \t LoadBalance_computation= %f\n", EMPI_GLOBAL_lastoverhead_processes,EMPI_GLOBAL_lastoverhead_rdata,dt_lb);
-	}		
-	
+    }        
+    
     //set dynamic workload
     EMPI_GLOBAL_wpolicy = EMPI_DYNAMIC;
 
@@ -4846,8 +4846,8 @@ static void EMPI_Monitor_remove (int *rank, int *size, int nprocs, int count, in
     EMPI_LBalance_remove (*rank, *size, (*size-nprocs), &rcount, &rdispl, vcounts, displs, smonitor, rremvs, fc);
 
     EMPI_GLOBAL_overhead_lbalance += (MPI_Wtime() - tini);
-	dt_lb=(MPI_Wtime() - tini);
-	
+    dt_lb=(MPI_Wtime() - tini);
+    
     //new size
     *size = *size - nprocs;
 
@@ -4856,31 +4856,31 @@ static void EMPI_Monitor_remove (int *rank, int *size, int nprocs, int count, in
     //redistribute data
     EMPI_Rdata (count, disp, rcount, rdispl);
 
-	EMPI_GLOBAL_lastoverhead_rdata= MPI_Wtime() - tini;
+    EMPI_GLOBAL_lastoverhead_rdata= MPI_Wtime() - tini;
     EMPI_GLOBAL_overhead_rdata += EMPI_GLOBAL_lastoverhead_rdata;
-	
-	// Begin Clarisse Control point
-	/*
-	printf("  Process [%d] Clarisse control point reached \n",*rank);
-	extern MPI_File fh;
-	int err;
-	err = MPI_File_close(&fh);
+    
+    // Begin Clarisse Control point
+    /*
+    printf("  Process [%d] Clarisse control point reached \n",*rank);
+    extern MPI_File fh;
+    int err;
+    err = MPI_File_close(&fh);
     if (err != MPI_SUCCESS) printf(" Native processs [%d]: error closing file \n",*rank);
-	cls_server_disconnect();		
-	*/
-	// End Clarisse Control point
-	
-	
+    cls_server_disconnect();        
+    */
+    // End Clarisse Control point
+    
+    
     tini = MPI_Wtime();
 
 
-	
+    
     //remove processes
     EMPI_Remove (nprocs, rremvs);
 
-	EMPI_GLOBAL_lastoverhead_processes=(MPI_Wtime() - tini);
+    EMPI_GLOBAL_lastoverhead_processes=(MPI_Wtime() - tini);
     EMPI_GLOBAL_overhead_processes += EMPI_GLOBAL_lastoverhead_processes;
-	
+    
     EMPI_Get_status (&status);
 
     if (status == EMPI_ACTIVE) {
@@ -4903,37 +4903,37 @@ static void EMPI_Monitor_remove (int *rank, int *size, int nprocs, int count, in
         //memcpy
         memcpy (EMPI_GLOBAL_vcounts, vcounts, (*size)*sizeof(int));
         memcpy (EMPI_GLOBAL_displs, displs, (*size)*sizeof(int));
-		
-		// Begin Clarisse Control point
-		/*
-		cls_set_client_intracomm(EMPI_COMM_WORLD);
-		MPI_Barrier(EMPI_COMM_WORLD);
-		cls_server_connect();
-		err = MPI_File_open(EMPI_COMM_WORLD, "abcd", MPI_MODE_CREATE | MPI_MODE_RDWR ,	MPI_INFO_NULL, &fh); // It should happend 
-		if (err != MPI_SUCCESS)	printf(" Native processs [%d]: error opening file \n",*rank);
-		*/
-		// End Clarisse Control point
+        
+        // Begin Clarisse Control point
+        /*
+        cls_set_client_intracomm(EMPI_COMM_WORLD);
+        MPI_Barrier(EMPI_COMM_WORLD);
+        cls_server_connect();
+        err = MPI_File_open(EMPI_COMM_WORLD, "abcd", MPI_MODE_CREATE | MPI_MODE_RDWR ,    MPI_INFO_NULL, &fh); // It should happend 
+        if (err != MPI_SUCCESS)    printf(" Native processs [%d]: error opening file \n",*rank);
+        */
+        // End Clarisse Control point
 
 
     } else {
 
-		// It is not necessary to disconnet from Clarisse the terminated process: it was already disconnected
+        // It is not necessary to disconnet from Clarisse the terminated process: it was already disconnected
         if (EMPI_GLOBAL_vcounts != NULL) { free (EMPI_GLOBAL_vcounts); EMPI_GLOBAL_vcounts = NULL; }
         if (EMPI_GLOBAL_displs != NULL) { free (EMPI_GLOBAL_displs); EMPI_GLOBAL_displs = NULL; }
-				
+                
         //removed process
         *rank = MPI_PROC_NULL;
-		// David: instead of having a unused process this terminates the process 
-		MPI_Finalize ();
-    }	
+        // David: instead of having a unused process this terminates the process 
+        MPI_Finalize ();
+    }    
 
     free (vcounts);
     free (displs);
-	
+    
     if (*rank == EMPI_root) {
         printf ("Removal cost:: process_destruction= %f \t data_redistribution= %f \t LoadBalance_computation= %f\n", EMPI_GLOBAL_lastoverhead_processes,EMPI_GLOBAL_lastoverhead_rdata,dt_lb);
-	}	
-	
+    }    
+    
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::exit::EMPI_Monitor_remove in <%s> ***\n", __FILE__);

@@ -1,7 +1,7 @@
 /**
-* @version		FlexMPI v3.1
-* @copyright	Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
-* @license		GNU/GPL, see LICENSE.txt
+* @version        FlexMPI v3.1
+* @copyright    Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
+* @license        GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
@@ -19,11 +19,11 @@
 */
 
 /****************************************************************************************************************************************
- *																																		*
- *	FLEX-MPI																															*
- *																																		*
- *	File:       empi.h																													*
- *																																		*
+ *                                                                                                                                        *
+ *    FLEX-MPI                                                                                                                            *
+ *                                                                                                                                        *
+ *    File:       empi.h                                                                                                                    *
+ *                                                                                                                                        *
  ****************************************************************************************************************************************/
 
 #ifndef _EMPI_H_
@@ -51,18 +51,18 @@
 #include <sys/socket.h>
 
 /* empi headers */
-#include <defs.h> 		//defines
-#include <vars.h> 		//variables
-#include <profile.h> 	//profiling data
-#include <init.h> 		//init
-#include <lbalance.h>	//load balance
+#include <defs.h>         //defines
+#include <vars.h>         //variables
+#include <profile.h>     //profiling data
+#include <init.h>         //init
+#include <lbalance.h>    //load balance
 #include <monitor_lp.h> //linear programming functions
-#include <monitor.h> 	//monitor
-#include <scheduler.h>	//scheduler
-#include <rdata.h> 		//redistribution data
-#include <wrapper.h> 	//wrapper
-#include <memalloc.h> 	//memory allocation
-#include <process.h> 	//process management
+#include <monitor.h>     //monitor
+#include <scheduler.h>    //scheduler
+#include <rdata.h>         //redistribution data
+#include <wrapper.h>     //wrapper
+#include <memalloc.h>     //memory allocation
+#include <process.h>     //process management
 #include <server.h>     //API server management
 
 // Network headers
