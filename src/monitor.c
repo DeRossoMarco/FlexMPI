@@ -4497,8 +4497,10 @@ static void EMPI_Comp_cost (double *cost_flops, double *cost_time, long long *fl
 
     //mflops: mflops of the new configuration
     //cost: cost of the new configuration
-    *cost_flops = (double)((*flop / mflops) * 1.0E-6);
-    *cost_time = (double)((scost/newsize) * 1.0E-6);
+    if(mflops!=0)    *cost_flops = (double)((*flop / mflops) * 1.0E-6);
+    else *cost_flops = 0;
+    if(newsize!=0)   *cost_time = (double)((scost/newsize) * 1.0E-6);
+    else *cost_time = 0;
     
     *flop = (*flop * 1.0E-6);
 
