@@ -1,5 +1,5 @@
-nodefile    = ../run/nodefile1.dat
-MPIPATH     = /usr/bin
+nodefile=../run/nodefile1.dat
+MPIPATH=/usr/bin
 
 list=`cat  $nodefile |  awk -F: '{print $1}' `
 for item in $list; do
