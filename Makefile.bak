@@ -1,4 +1,3 @@
-HOME=/home/desingh
 PAPI_DIR=$(HOME)/LIBS/papi
 GLPK_DIR=$(HOME)/LIBS/glpk
 MPICC   =$(HOME)/LIBS/mpich/bin/mpicc
