@@ -95,7 +95,7 @@ int newPort1, newPort2;
 
 // Data structures for perf prediction
 double tstamp[NUMSAMPLES][MAX_APPS],tlong[NUMSAMPLES][MAX_APPS],cput[NUMSAMPLES][MAX_APPS],delay_v[NUMSAMPLES][MAX_APPS],delay_t[NUMSAMPLES][MAX_APPS];
-double GLOBAL_delayt1[MAX_APPS],GLOBAL_delayt2[MAX_APPS],GLOBAL_acqt[MAX_APPS],GLOBAL_IOSCHEDULING_THRESHOLD;  // Time samples 
+double GLOBAL_delayt1[MAX_APPS],GLOBAL_delayt2[MAX_APPS],GLOBAL_IOSCHEDULING_THRESHOLD;  // Time samples 
 int  numprocs[NUMSAMPLES][MAX_APPS],niter[NUMSAMPLES][MAX_APPS];
 int cnt_app[MAX_APPS],update[MAX_APPS],cnt_delay[MAX_APPS];
 double p_tstamp[STAMPSIZE][MAX_APPS],p_tlong[MAX_APPS]; // Predicted values
@@ -667,7 +667,7 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
         fclose(file2);
         
         sprintf(output,"cd %s/FlexMPI/scripts\n",HOME); // For Jacobi
-        sprintf(line,"export LD_LIBRARY_PATH=%s/LIBS/glpk/lib/:%s/FlexMPI/lib/:%s/LIBS/mpichbis/lib/:%s/LIBS/papi/lib/:$LD_LIBRARY_PATH\n",HOME,HOME,HOME,HOME);
+        sprintf(line,"export LD_LIBRARY_PATH=%s/LIBS/glpk/lib/:%s/FlexMPI/lib/:%s/LIBS/mpich/lib/:%s/LIBS/papi/lib/:$LD_LIBRARY_PATH\n",HOME,HOME,HOME,HOME);
         strcat(output,line);
         if(appclass==6) { // Clarisse
             sprintf(line,"export CLARISSE_COUPLENESS=dynamic\n");
@@ -743,7 +743,7 @@ int command_listener(void *arguments)
     struct sockaddr_in serverAddr;
     struct sockaddr_in appAddr;
     
-    int i, s, n, slen = sizeof(si_other),id,local_terminated_app,tmp,local_reconf,cnt,iter;
+    int i, s, n, slen = sizeof(si_other),id,local_terminated_app,tmp,local_reconf,iter;
     int WS,busyIO;
     struct arg_struct1 *args = arguments;
     struct timeval timestamp1,timestamp2;
@@ -755,6 +755,7 @@ int command_listener(void *arguments)
     char path[1035];
     int flag[MAX_APPS],flag2;
     char appcmd[1024];
+    int cnt;
     
     struct hostent   *he;
     socklen_t addr_size;   
@@ -975,12 +976,10 @@ int command_listener(void *arguments)
             
             // Only active when I/O operations are scheduled
             if(GLOBAL_SCHEDULING_IO){
-                pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
-                GLOBAL_acqt[n]=(double)delta_t/1000;
-                
+                pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);                
                 local_reconf=GLOBAL_RECONF;
                 if(GLOBAL_busyIO){
-                    GLOBAL_reqIO[id]=1; // Queues
+                    GLOBAL_reqIO[id]=1; // Request is queued
                     busyIO=1;
                 }
                 else{  
@@ -1041,7 +1040,7 @@ int command_listener(void *arguments)
             if(GLOBAL_DEBUG){
                 gettimeofday(&timestamp1, NULL);
                 delta_t = (timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
-                printf("  [ %f ] Adquiring IO request from %d \n",(double)delta_t/1000,id);            
+                printf("  [ %f ] Acquiring IO request from %d \n",(double)delta_t/1000,id);            
             }
             
             // Acknowledges the ACQIO request             
@@ -1058,7 +1057,7 @@ int command_listener(void *arguments)
         
             sprintf(appcmd,"10:1");
         
-            // Sends the connection command to the GUI (only once)
+            // Sends the connection command to the application
             sendto(s,appcmd,strlen(appcmd),0,(struct sockaddr *)&appAddr,addr_size);  
                 
         }
@@ -1070,15 +1069,23 @@ int command_listener(void *arguments)
                 printf("  [ %f ] Releasing IO request from %d \n",(double)delta_t/1000,id);            
             }
             
-            cnt=0;
             pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
             GLOBAL_busyIO=0;
+            delta_t=(timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
+            
+            cnt=0;
+            for(n=0;n<GLOBAL_napps;n++){
+                if(GLOBAL_reqIO[n]==1)  cnt++;
+            }
+            
+            printf("  [ %f ] I/O blocked applications: %d - ",(double)delta_t/1000,cnt);
             for(n=0;n<GLOBAL_napps;n++){
                 if(GLOBAL_reqIO[n]==1){
-                    GLOBAL_reqIO[n]=2;
-                    cnt++;
-                } 
+                   printf(" [ %d ]",n);
+                   GLOBAL_reqIO[n]=2;
+                }
             }
+            printf("\n");
             
             if(GLOBAL_DEBUG){
                 gettimeofday(&timestamp1, NULL);
@@ -1207,7 +1214,6 @@ int main (int argc, char** argv)
     
     for(n=0;n<MAX_APPS;n++){
         GLOBAL_reqIO[n]=0;
-        GLOBAL_acqt[n]=0;
         GLOBAL_delayt1[n]=0;
         GLOBAL_delayt2[n]=0;
     }
@@ -1225,8 +1231,8 @@ int main (int argc, char** argv)
     }
     pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
     
-    if(GLOBAL_RECONF==1) printf("\n   # Application maleability enabled \n");
-    else printf("\n   # Application maleability disabled \n\n\n");
+    if(GLOBAL_RECONF==1) printf("\n   # Application malleability enabled \n");
+    else printf("\n   # Application malleability disabled \n\n\n");
 
     // if flag -noexecute is present: only generates exec scripts (it does not execute the application)
     GLOBAL_EXEC=1;
