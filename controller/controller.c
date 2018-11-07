@@ -40,26 +40,9 @@
 #include <math.h>
 #include <errno.h>
 #include <netdb.h>
-
 #include <signal.h>
+#include "controller.h"
 
-#define BUFLEN 512
-#define NUMBER_OPTIONS 10
-#define EMPI_COMMBUFFSIZE 2048
-// WS1 -> Mínimum number of samples to make a prediction
-// WS2 -> Maximum number of samples used in the prediction
-#define MAX_APPS            50
-#define WS1                    2
-#define WS2                    5
-#define NCLASES             500
-#define BUFSIZE             512
-#define STAMPSIZE           8  
-#define IORATIO             5
-#define NUMSAMPLES          1000
-
-// Sampling iterations of the original code 
-#define SAMPLING            100
-#define reconfig_overhead   15
 static const char *HOME;
 
 struct  applicationset {
@@ -84,8 +67,9 @@ struct timeval initial;
 
 struct applicationset GLOBAL_app[MAX_APPS];
 
-int GLOBAL_napps, GLOBAL_RECONF, GLOBAL_PREDEFSPEEDUP,GLOBAL_SYNCIOPHASES,GLOBAL_busyIO,GLOBAL_monitoring,GLOBAL_iter[MAX_APPS],GLOBAL_GUI,GLOBAL_GUI_PORT,GUI_ListenerPort,GLOBAL_TERMINATION;
+int GLOBAL_napps, GLOBAL_RECONF, GLOBAL_PREDEFSPEEDUP,GLOBAL_SYNCIOPHASES,GLOBAL_busyIO,GLOBAL_monitoring,GLOBAL_iter[MAX_APPS],GLOBAL_GUI,GLOBAL_GUI_PORT,GUI_ListenerPort,GLOBAL_TERMINATION,GLOBAL_EARLYTERMINATION;
 int GLOBAL_reqIO[MAX_APPS];
+double GLOBAL_IOsize[MAX_APPS];
 int GLOBAL_EXEC,GLOBAL_ADHOC, GLOBAL_RECORDEDSPEEDUP, GLOBAL_RECORDEDEXECTIMES,GLOBAL_MAXTHROUGHPUT,GLOBAL_FAIRSCHEDULING_NP,GLOBAL_SPEEDUPSCHEDULING_NP;
 int GLOBAL_CLARISSEONLY,GLOBAL_FAIRSHEDULING,GLOBAL_SPEEDUPSCHEDULING,GLOBAL_IOSCHEDULING;
 int GLOBAL_SCHEDULING_IO;
@@ -158,10 +142,32 @@ typedef struct service_arguments {
     int socket;
     struct sockaddr_in address;
 } service_arguments;
- 
+  
+void  printstats(){
+   
+    int n,i;
+    double acum_cpu,acum_tlong,acum_delay;
+    pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
 
- void check_node()
- {
+     printf("\n ************* EXECUTION STATISTICS ************* \n");
+     printf("Application \t [Tot. CPUt] \t [Tot. IOt] \t [Tot. Delayt] \t [CPUt per it.] [IOt per it.] \t [Delayt  per it.] \n");
+    
+    for(n=0;n<GLOBAL_napps;n++){
+        acum_cpu=0;
+        acum_tlong=0;
+        acum_delay=0;
+        for(i=0;i<cnt_app[n];i++) acum_cpu+=cput[i][n];
+        for(i=0;i<cnt_app[n];i++) acum_tlong+=tlong[i][n];
+        for(i=0;i<cnt_delay[n];i++) acum_delay+=delay_v[i][n]; 
+        printf("    %d \t\t %8.2f \t %8.2f \t %8.2f \t %8.2f \t %8.2f \t %8.2f \n",n,acum_cpu,acum_tlong,acum_delay,acum_cpu/cnt_app[n],acum_tlong/cnt_app[n],acum_delay/cnt_app[n]);
+    }
+    pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
+    printf("\n \n");
+        
+}
+
+void check_node()
+{
     FILE *file;
     char command[256],nodename1[256],nodename2[256];
 
@@ -325,7 +331,7 @@ int allocnodes(int appid,int delta_p, char* command, int iter){
         GLOBAL_app[appid].newprocs_class[i]+=tmpval[i];    // Spawn processes
     }
     
-    printf("         ### I/O Scheduler node allocation for application %d: Spawn processes: %d\n",appid,delta_p);
+    printf("         ### Node allocation for application %d: Spawn processes: %d\n",appid,delta_p);
     printf("         ### Application [%d] :  ",appid);
     for (i=0;i<num_classes;i++) printf(" %d",val1[i]);
     printf("\n");
@@ -749,13 +755,12 @@ int command_listener(void *arguments)
     struct timeval timestamp1,timestamp2;
     uint64_t delta_t;
     double delta_long,delta_cpu,tot_IO,tmp_dl,tmp_dt,delayttime;
-    double rtime,ptime,ctime,mflops,count1,count2,iotime,size;
+    double rtime,ptime,ctime,mflops,count1,count2,iotime,size,datasize;
     char *token;
     FILE *fp;
     char path[1035];
     int flag[MAX_APPS],flag2;
     char appcmd[1024];
-    int cnt;
     
     struct hostent   *he;
     socklen_t addr_size;   
@@ -820,7 +825,7 @@ int command_listener(void *arguments)
         }
         
         // IO operation
-        if(buf[0]=='I' && buf[1]=='O')
+        if(strncmp(buf, "IO", 2)==0)
         {
             gettimeofday(&timestamp1, NULL);
             delta_t = (timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
@@ -928,18 +933,22 @@ int command_listener(void *arguments)
          pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);    // Creates one thread per application
          printf("\n ** application terminated [%d,%d] \n",terminated_app,GLOBAL_napps);
          
-         // ****** Kills all apps when one terminates
-          //killall(-1); // Terminates all the applications
-          //sleep(5);
-          //exit(1); 
-         // ******
-         if(local_terminated_app>=GLOBAL_napps)
+         if(GLOBAL_EARLYTERMINATION){
+             // Terminates all applications when the first one terminates
+             printf("\n *** The first application has terminated, terminating the remaining ones. \n\n");
+             killall(-1); // Terminates all running applications
+             sleep(15);
+             printstats();
+             exit(1); 
+         }
+         else if(local_terminated_app>=GLOBAL_napps)
          {
               printf("\n *** All applications have terminated.... exiting \n\n");
               sleep(10);          
               killall(-1); // Terminates all the applications
               sleep(5);
-              
+              printstats();
+
               if(0){
                   for (n=0;n<GLOBAL_napps;n++){
                         /* Open the command for reading. */
@@ -965,14 +974,26 @@ int command_listener(void *arguments)
               exit(1);
          }
         } 
-        else if(strcmp(buf,"ACQIO")==0)
+        else if(strncmp(buf, "ACQIO", 5)==0)
         {
             id=args->id;
             
+            /* gets the amount of written data */
+            token = strtok(buf, " ");
+            if(token!=NULL)
+            {
+                token = strtok(NULL, " ");
+                datasize=atof(token);
+                pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);   
+                GLOBAL_IOsize[id]=datasize;
+                pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);                
+
+            }
+                
             gettimeofday(&timestamp1, NULL);
             delta_t=(timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
             
-            if(GLOBAL_DEBUG) printf("  [ %f ] IO request from %d \n",(double)delta_t/1000,id);            
+            if(GLOBAL_DEBUG) printf("  [ %f ] IO request from %d with %f bytes of data\n",(double)delta_t/1000,id,datasize);            
             
             // Only active when I/O operations are scheduled
             if(GLOBAL_SCHEDULING_IO){
@@ -983,7 +1004,7 @@ int command_listener(void *arguments)
                     busyIO=1;
                 }
                 else{  
-                    GLOBAL_busyIO=1; // Adquires
+                    GLOBAL_busyIO=1; // Acquires
                     GLOBAL_reqIO[id]=0;
                     busyIO=0;
                 }
@@ -999,7 +1020,7 @@ int command_listener(void *arguments)
                         pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
                         if(GLOBAL_reqIO[id]==2){
                             busyIO=GLOBAL_busyIO;
-                            if(busyIO==0) GLOBAL_busyIO=1; // Adquires
+                            if(busyIO==0) GLOBAL_busyIO=1; // Acquires
                             else GLOBAL_reqIO[id]=1;       // Queues
                         }
                         pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
@@ -1021,7 +1042,7 @@ int command_listener(void *arguments)
                     gettimeofday(&timestamp2, NULL);
                     delta_t=(timestamp2.tv_sec - timestamp1.tv_sec) * 1000 + (timestamp2.tv_usec - timestamp1.tv_usec) / 1000;
                     tmp_dt=(double)((timestamp2.tv_sec - initial.tv_sec)*1000  + (timestamp2.tv_usec - initial.tv_usec)/ 1000)/1000;
-                    if(delta_t>0) printf("  *** [ %f ] Delaying IO request of %d in %f secs. \n",tmp_dt,id,(double)delta_t/1000);
+                    if(delta_t>0) printf("          E1: [ %f ] Delaying IO request of %d in %f secs. \n",tmp_dt,id,(double)delta_t/1000);
                     
                     // Records the delay value
                     delay_v[cnt_delay[id]][id]=(double)delta_t/1000;
@@ -1072,21 +1093,10 @@ int command_listener(void *arguments)
             pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
             GLOBAL_busyIO=0;
             delta_t=(timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
-            
-            cnt=0;
-            for(n=0;n<GLOBAL_napps;n++){
-                if(GLOBAL_reqIO[n]==1)  cnt++;
-            }
-            
-            printf("  [ %f ] I/O blocked applications: %d - ",(double)delta_t/1000,cnt);
-            for(n=0;n<GLOBAL_napps;n++){
-                if(GLOBAL_reqIO[n]==1){
-                   printf(" [ %d ]",n);
-                   GLOBAL_reqIO[n]=2;
-                }
-            }
-            printf("\n");
-            
+                       
+            // Calls the I/O scheduler
+            IO_scheduler();
+                 
             if(GLOBAL_DEBUG){
                 gettimeofday(&timestamp1, NULL);
                 delta_t=(timestamp1.tv_sec - initial.tv_sec) * 1000 + (timestamp1.tv_usec - initial.tv_usec) / 1000;
@@ -1214,6 +1224,7 @@ int main (int argc, char** argv)
     
     for(n=0;n<MAX_APPS;n++){
         GLOBAL_reqIO[n]=0;
+        GLOBAL_IOsize[n]=0;
         GLOBAL_delayt1[n]=0;
         GLOBAL_delayt2[n]=0;
     }
@@ -1368,7 +1379,15 @@ int main (int argc, char** argv)
         }
     }
     if(GLOBAL_IOSCHEDULING==1) printf("\n   # IO-based scheduler activated \n");
-   
+ 
+    GLOBAL_EARLYTERMINATION=0;
+     for (n = 0; n < argc; n ++) {
+        if (strcmp(argv[n], "-earlytermination") == 0) {            
+            GLOBAL_EARLYTERMINATION=1;
+        }
+    }
+    if(GLOBAL_EARLYTERMINATION==1) printf("\n   # Early termination activated \n");
+ 
     if(GLOBAL_IOSCHEDULING+GLOBAL_SPEEDUPSCHEDULING+GLOBAL_FAIRSHEDULING+GLOBAL_CLARISSEONLY+GLOBAL_MAXTHROUGHPUT+GLOBAL_SYNCIOPHASES>1){
         diep("Error: flags -clarisseonly -maxthroughput and -synciophases cannot be used at the same time \n");
     } 

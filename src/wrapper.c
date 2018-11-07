@@ -40,12 +40,18 @@ int MPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype dat
     int err,rank,size;
     double iot2,iot1,local_delayiotime;
     int local_delayio,termination;
-    
+    int datatype_size;
+    double datasize;
     char socketcmd[1024]; 
     
     MPI_Comm_rank(EMPI_COMM_WORLD,&rank);
     MPI_Comm_size (EMPI_COMM_WORLD, &size);
-
+    
+    // Obtains the amount of data written. Note. As an approximation we assume that all processes write the same amount of data
+    MPI_Type_size(datatype,&datatype_size);
+    datasize=(double)datatype_size;
+    datasize=datasize*count*size;
+    
     //capture io
     //if (EMPI_GLOBAL_capture_comms) EMPI_Capture_comms (MPI_ALLGATHER, &sendcount, sendtype);
 
@@ -59,7 +65,7 @@ int MPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype dat
     
     // Sends controller acquire request
     if(rank==0){
-        sprintf(socketcmd,"ACQIO");
+        sprintf(socketcmd,"ACQIO: %f",datasize);
         sendto(EMPI_GLOBAL_socket,socketcmd,strlen(socketcmd),0,(struct sockaddr *)&EMPI_GLOBAL_controller_addr,sizeof(EMPI_GLOBAL_controller_addr));     
     }
             
