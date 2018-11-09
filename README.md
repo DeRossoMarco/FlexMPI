@@ -37,6 +37,8 @@ under the project TIN2013-41350-P (Scalable Data Management Techniques for High-
 
 ## References ##
 
+* David E. Singh and Jesus Carretero. Combining malleability and I/O control mechanisms to enhance the execution of multiple applications. Journal of Systems and Software. 2019.
+
 * Gonzalo Martin, David E. Singh, Maria-Cristina Marinescu and Jesus Carretero. Enhancing the performance of malleable MPI applications by using performance-aware dynamic reconfiguration. Parallel Computing. Vol. 46, No. 0. Pages: 60-77. 2015.
 
 * Manuel Rodríguez-Gonzalo, David E. Singh, Javier García Blas and Jesús Carretero. Improving the energy efficiency of MPI applications by means of malleability. 24th Euromicro International Conference on Parallel, Distributed and Network-based Processing (PDP). Heraklion, Greece, February, 2016.
