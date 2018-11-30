@@ -38,7 +38,7 @@ int GLOBAL_DIFFERENTNODES, GLOBAL_EXCLCONTROLLER;
 int CONTROLLERPROCS;
 
 // This file generates the workload  
-static void Workload_generator (char *filename,int napp, int * nproc, int * Nsize,int * NIO, int * NCPU, int * NCOM, double * IOaction, int * NumIter) 
+static void Workload_generator (char *filename,char appname[1000][100],int napp, int * nproc, int * Nsize,int * NIO, int * NCPU, int * NCOM, double * IOaction, int * NumIter) 
 {
  	char LOCAL_hclasses[NCLASES][128]; //host classes
 	char LOCAL_rclasses[NCLASES][128]; //host classes
@@ -68,6 +68,7 @@ static void Workload_generator (char *filename,int napp, int * nproc, int * Nsiz
 	while (fscanf (file, "%s\n", readline) != EOF) {
 		//Get values
 		record = strtok (readline, token);  // Node name
+        
 		if(record==NULL){fprintf (stderr, "\nError1 parsing Parse_malleability %s\n",filename);exit(1); }
 		strncpy(LOCAL_hclasses[LOCAL_nhclasses],record,strlen(record));
 		record = strtok (NULL, token);  // Num procs. 
@@ -129,7 +130,7 @@ static void Workload_generator (char *filename,int napp, int * nproc, int * Nsiz
 		exit(1);
 	}
 
-	printf("\n\n ### Application workfile: ");
+	printf("\n\n ### Controller workfile: ");
 	LOCAL_nhclasses=0;
 	
     currclass[0]=0;
@@ -139,7 +140,7 @@ static void Workload_generator (char *filename,int napp, int * nproc, int * Nsiz
 	// Creates the nodelist
 	for(i=0;i<napp;i++){
 		j=0;
-		sprintf(line,"jio");
+		sprintf(line,"%s",appname[i]);
         sprintf(tmp,":%d",Nsize[i]);
         strcat(line,tmp);
         sprintf(tmp,":%d",NCPU[i]);
@@ -196,9 +197,10 @@ int main (int argc, char** argv)
 {
 	int napp,app[1000],Nsize[1000],NIO[1000],NCPU[1000],NCOM[1000],NumIter[1000];
     double IOaction[1000];
-    int n,i=1;
+    int n,i=1,class;
 	FILE *file;
 	char readline[1000];
+    char appname[1000][100];
     char token[] = ":", *record = NULL;
     	
 	printf("\n \n **************************************************************** \n");
@@ -251,34 +253,49 @@ int main (int argc, char** argv)
 	napp=0;
     printf("\n");
     
-	//while (fscanf (file, "%s\n", readline) != EOF) {
  	while (fgets (readline,1000,file) != NULL) {
         if(readline[0]!='#' && readline[0]!='\n'){
 
-            record = strtok (readline, token);  // Num procs. 
-            if(record==NULL){fprintf (stderr, "\n Error1 parsing %s file \n",argv[2]);exit(1); }           
+            record = strtok (readline, token);  // App name
+            if(record==NULL){fprintf (stderr, "\n Error0 parsing %s file \n",argv[2]);exit(1); }    
+            // Checks the if the application name is valid
+            class=0;
+            if(strcmp(record,"jacobi")==0) class=1;
+            if(strcmp(record,"cg")==0) class=2;
+            if(strcmp(record,"epigraph")==0) class=3;
+            if(class==0){
+                fprintf (stderr, "\n Error0 in %s file: application name not valid \n",argv[2]);
+                exit(1); 
+            }
+            strcpy(appname[napp], record);  
+            record = strtok (NULL, token);  // Num procs. 
+            if(record==NULL){fprintf (stderr, "\n Error1 parsing %s file \n",argv[2]);exit(1); }         
             app[napp]=atoi(record);
             record = strtok (NULL, token);  // Size
             if(record==NULL){fprintf (stderr, "\n Error2 parsing %s file \n",argv[2]);exit(1); }
-            Nsize[napp]=atoi(record);
+            if(class<3) Nsize[napp]=atoi(record);
+            else        Nsize[napp]=0;
             record = strtok (NULL, token);  // NCPU
             if(record==NULL){fprintf (stderr, "\n Error3 parsing %s file \n",argv[2]);exit(1); }
-            NCPU[napp]=atoi(record);
+            if(class==1) NCPU[napp]=atoi(record);
+            else         NCPU[napp]=0;
             record = strtok (NULL, token);  // NCOM
             if(record==NULL){fprintf (stderr, "\n Error4 parsing %s file \n",argv[2]);exit(1); }
-            NCOM[napp]=atoi(record);
+            if(class==1) NCOM[napp]=atoi(record);
+            else         NCOM[napp]=0;
             record = strtok (NULL, token);  // NIO
             if(record==NULL){fprintf (stderr, "\n Error5 parsing %s file \n",argv[2]);exit(1); }
-            NIO[napp]=atoi(record);
+            if(class==1) NIO[napp]=atoi(record);
+            else         NIO[napp]=0;
             record = strtok (NULL, token);  // IOaction
             if(record==NULL){fprintf (stderr, "\n Error6 parsing %s file \n",argv[2]);exit(1); }
             IOaction[napp]=atof(record);
             record = strtok (NULL, token);  // NumIter
             if(record==NULL){fprintf (stderr, "\n Error7 parsing %s file \n",argv[2]);exit(1); }
-            NumIter[napp]=atof(record);
+            if(class<3) NumIter[napp]=atof(record);
+            else        NumIter[napp]=0;
             
-            
-            printf("    Application %d :: Np= %d \t Size= %d \t NCPU= %d \t NCOM= %d \t NIO= %d \t IOaction= %f \t NumIter= %d \n",napp,app[napp],Nsize[napp],NCPU[napp],NCOM[napp],NIO[napp],IOaction[napp],NumIter[napp]);
+            printf("    Application %d :: %s \t Np= %d \t Size= %d \t NCPU= %d \t NCOM= %d \t NIO= %d \t IOaction= %f \t NumIter= %d \n",napp,appname[napp],app[napp],Nsize[napp],NCPU[napp],NCOM[napp],NIO[napp],IOaction[napp],NumIter[napp]);
             napp++;
             if(napp>1000){
                 fprintf (stderr, "\nError number of applications  is exceeded \n");
@@ -289,7 +306,7 @@ int main (int argc, char** argv)
 	fclose(file);
 
 
-	Workload_generator(argv[i],napp,app,Nsize,NIO,NCPU,NCOM,IOaction,NumIter);
+	Workload_generator(argv[i],appname,napp,app,Nsize,NIO,NCPU,NCOM,IOaction,NumIter);
 	printf("\n\n Exiting.... \n \n");
     
 	exit(1);
