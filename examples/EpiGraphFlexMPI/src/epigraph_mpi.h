@@ -28,8 +28,8 @@
 #include <math.h>
 #include <csparse.h>
 #include <auxiliar.h>
-#include <./libxml/parser.h>
-#include <./libxml/tree.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 #include <memcount.h>
