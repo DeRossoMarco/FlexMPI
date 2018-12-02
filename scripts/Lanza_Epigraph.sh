@@ -2,7 +2,7 @@ nodefile=../run/nodefile1.dat
 MPIPATH=/usr/bin
 
 # Uncomment for a local installation of the libraries
-MPIPATH=~/LIBS/mpich/bin/
+#MPIPATH=~/LIBS/mpich/bin/
 
 list=`cat  $nodefile |  awk -F: '{print $1}' `
 for item in $list; do
