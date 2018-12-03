@@ -673,6 +673,7 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
         
         sprintf(output,"cd %s/FlexMPI/scripts\n",HOME); // For Jacobi
         sprintf(line,"export LD_LIBRARY_PATH=%s/LIBS/glpk/lib/:%s/FlexMPI/lib/:%s/LIBS/mpich/lib/:%s/LIBS/papi/lib/:$LD_LIBRARY_PATH\n",HOME,HOME,HOME,HOME);
+        if(appclass==3) sprintf(line,"export LD_LIBRARY_PATH=%s/LIBS/gsl/gsl-1.16/.libs:%s/LIBS/gsl/gsl-1.16/cblas/.libs:$LD_LIBRARY_PATH\n",HOME,HOME);
         strcat(output,line);
         if(appclass==6) { // Clarisse
             sprintf(line,"export CLARISSE_COUPLENESS=dynamic\n");
