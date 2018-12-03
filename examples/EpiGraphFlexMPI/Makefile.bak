@@ -11,7 +11,7 @@ LIBGSL=-lgsl -lgslcblas
 #MPICC=$(HOME)/LIBS/mpich/bin/mpicc
 #PAPI=-I$(HOME)/LIBS/papi/include/ -L$(HOME)/LIBS/papi/lib -lpapi 
 #GLPK=-I$(HOME)/LIBS/glpk/include/ -L$(HOME)/LIBS/glpk/lib/ -lglpk
-#LIBXML=-I$(HOME)/LIBS/libxml2/libxml -L$(HOME)/LIBS -lxml2
+#LIBXML=-I$(HOME)/LIBS/libxml2 -L$(HOME)/LIBS -lxml2
 #LIBGSL=-I$(HOME)/LIBS/gsl/gsl-1.16 -L$(HOME)/LIBS/gsl/gsl-1.16/.libs -L$(HOME)/LIBS/gsl/gsl-1.16/cblas/.libs -lgsl -lgslcblas
 
 
