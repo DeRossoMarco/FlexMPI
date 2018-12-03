@@ -273,7 +273,7 @@ int main (int argc, char** argv)
             app[napp]=atoi(record);
             record = strtok (NULL, token);  // Size
             if(record==NULL){fprintf (stderr, "\n Error2 parsing %s file \n",argv[2]);exit(1); }
-            if(class<3) Nsize[napp]=atoi(record);
+            if(class<2) Nsize[napp]=atoi(record);
             else        Nsize[napp]=0;
             record = strtok (NULL, token);  // NCPU
             if(record==NULL){fprintf (stderr, "\n Error3 parsing %s file \n",argv[2]);exit(1); }
