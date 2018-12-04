@@ -16,8 +16,13 @@ EMPI=-I$(LIBEMPI_DIR)/include/ -L$(LIBEMPI_DIR)/lib/ -I$(LIBEMPI_DIR)/include -l
 CFLAGS=-Wall -g
 MATH= -lm
 
-.PHONY: jacobi
-	
+all:
+	make jacobi
+	make cg
+	@echo "+++ MAKE COMPLETE +++"
+
 jacobi:
-	$(MPICC) $(CFLAGS) -o jacobi_IO_V4.o jacobi_IO_V4.c -c $(EMPI) $(PAPI) -lpapi  $(GLPK) -lglpk 
-	$(MPICC) $(CFLAGS)  jacobi_IO_V4.o -o jacobi_IO  $(EMPI) $(PAPI) -lpapi $(GLPK) -lglpk 
+	$(MPICC) $(CFLAGS) -o jacobi_IO jacobi_IO_V4.c  $(EMPI) $(PAPI) -lpapi  $(GLPK) -lglpk 
+
+cg:
+	$(MPICC) $(CFLAGS) -o gradient  gradient.c  $(EMPI) $(PAPI) $(GLPK) -lm  -lpapi -lglpk

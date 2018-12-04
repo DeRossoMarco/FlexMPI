@@ -5,8 +5,11 @@
 #       If IO_action>=0,the program sleeps IO_action during the I/O call
 
 #Application 1
-2:5000:2:1:1:2.5:2000
-
+jacobi:2:5000:2:1:1:2.5:2000
 
 #Application 2
-4:7000:1:1:1:-1:3000
+epigraph:4:7000:1:1:1:2:3000
+
+#Application 3
+cg:2:5000:2:1:1:2.5:2000
+

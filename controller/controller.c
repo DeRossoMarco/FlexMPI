@@ -46,6 +46,7 @@
 static const char *HOME;
 
 struct  applicationset {
+    char appname[100];
     char hclasses[NCLASES][128]; //host classes
     char rclasses[NCLASES][128]; //reduce clase definition
     int  ncores_class[NCLASES];
@@ -535,16 +536,14 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
         
         
         // First entry is the application name
-        if (strcmp (record, "cpu") == 0) appclass=1;  // Jacobi cpu
-        if (strcmp (record, "mem") == 0) appclass=2; // Jacobi mem
-        if (strcmp (record, "vpicio") == 0) appclass=3; // cpicio
-        if (strcmp (record, "com") == 0) appclass=4; // Jacobi_bench communication intensive
-        if (strcmp (record, "IO") == 0) appclass=5;  // GSL IO 
-        if (strcmp (record, "cls") == 0) appclass=6; // Clarisse IO 
-        if (strcmp (record, "jio") == 0) appclass=7; // Jacobi IO     
-        if (strcmp (record, "emjio") == 0) appclass=8; // Emulator of Jacobi IO     
+        if (strcmp (record, "jacobi") == 0) appclass=1;  // Jacobi cpu
+        if (strcmp (record, "cg") == 0) appclass=2; // cpicio
+        if (strcmp (record, "epigraph") == 0) appclass=3; // Jacobi mem
         if (appclass==0) diep("\n Error format roadmap file: no valid application\n");
 
+        // Obtains the application name
+        strcpy(GLOBAL_app[nfile].appname,record);
+        
         // Obtains the application size
         record = strtok (NULL, token);;
         Nsize=atoi(record);
@@ -674,6 +673,7 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
         
         sprintf(output,"cd %s/FlexMPI/scripts\n",HOME); // For Jacobi
         sprintf(line,"export LD_LIBRARY_PATH=%s/LIBS/glpk/lib/:%s/FlexMPI/lib/:%s/LIBS/mpich/lib/:%s/LIBS/papi/lib/:$LD_LIBRARY_PATH\n",HOME,HOME,HOME,HOME);
+        if(appclass==3) sprintf(line,"export LD_LIBRARY_PATH=%s/LIBS/gsl/gsl-1.16/.libs:%s/LIBS/gsl/gsl-1.16/cblas/.libs:$LD_LIBRARY_PATH\n",HOME,HOME);
         strcat(output,line);
         if(appclass==6) { // Clarisse
             sprintf(line,"export CLARISSE_COUPLENESS=dynamic\n");
@@ -681,15 +681,12 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
             sprintf(line,"export CLARISSE_PORT_PATH=%s/FlexMPI/examples/examples1\n",HOME);
             strcat(output,line);        
         }
+       
         
-        if (appclass==1) sprintf(line,"./Lanza_cpu %d %d %d %d\n",nprocs,port1,port2,nfile+1);
-        if (appclass==2) sprintf(line,"./Lanza_mem %d %d %d %d\n",nprocs,port1,port2,nfile+1);
-        if (appclass==3) sprintf(line,"./Lanza7 %d %d %d %d\n",nprocs,port1,port2,nfile+1);
-        if (appclass==4) sprintf(line,"./Lanza_com %d %d %d %d\n",nprocs,port1,port2,nfile+1);
-        if (appclass==5) sprintf(line," %s/FlexMPI/examples/examples2/source/benchmarks/write/vpicio/vpicio_uni/Lanza_IO %d %d %d %d\n",HOME,nprocs,port1,port2,nfile+1);
-        if (appclass==6) sprintf(line,"./Lanza_clarisse %d %d %d %d\n",nprocs,port1,port2,nfile+1);
-        if (appclass==7) sprintf(line,"./Lanza_Jacobi_IO.sh %d %d %d %d %d %d %d %d %f %d\n",nprocs,port1,port2,nfile+1,Nsize,NIO,NCPU,NCOM,IOaction,NumIter);
-        if (appclass==8) sprintf(line,"./Lanza_JacobiEmulator_IO.sh %d %d %d %d\n",nprocs,port1,port2,nfile+1);
+        if (appclass==1) sprintf(line,"./Lanza_Jacobi_IO.sh %d %d %d %d %d %d %d %d %f %d\n",nprocs,port1,port2,nfile+1,Nsize,NIO,NCPU,NCOM,IOaction,NumIter); // Jacobi
+        if (appclass==2) sprintf(line,"./Lanza_CG.sh %d %d %d %d %d %d %d %d %f %d\n",nprocs,port1,port2,nfile+1,Nsize,NIO,NCPU,NCOM,IOaction,NumIter); // Conjugate gradient
+        if (appclass==3) sprintf(line,"./Lanza_Epigraph.sh %d %d %d %d %f\n",nprocs,port1,port2,nfile+1,IOaction); // Epigraph
+       
         port1+=2;
         port2+=2;
         
@@ -1425,7 +1422,7 @@ int main (int argc, char** argv)
     // Prints the application execution environment
     printf("\n \n --- Displaying the application workload in benchmark mode\n");
     for(n=0;n<GLOBAL_napps;n++){
-        printf("  Application (benchmark) %d, Port1 (listener): %d Port2 (Sender): %d\n",n,GLOBAL_app[n].port1,GLOBAL_app[n].port2);
+        printf("  Application name: %s, id: %d, Port1 (listener): %d Port2 (Sender): %d\n",GLOBAL_app[n].appname,n,GLOBAL_app[n].port1,GLOBAL_app[n].port2);
         for(m=0;m<GLOBAL_app[n].nhclasses;m++){
             printf(" \t \t %s \t ncores: \t %d \t nprocs \t %d\n",GLOBAL_app[n].hclasses[m],GLOBAL_app[n].ncores_class[m],GLOBAL_app[n].nprocs_class[m]);
         }
@@ -1497,7 +1494,7 @@ int main (int argc, char** argv)
     // Prints the application execution environment
     printf("\n \n --- Displaying the application workload \n");
     for(n=0;n<GLOBAL_napps;n++){
-        printf("  Application (benchmark) %d, Port1 (listener): %d Port2 (Sender): %d\n",n,GLOBAL_app[n].port1,GLOBAL_app[n].port2);
+        printf("  Application name: %s, id: %d, Port1 (listener): %d Port2 (Sender): %d\n",GLOBAL_app[n].appname,n,GLOBAL_app[n].port1,GLOBAL_app[n].port2);
         for(m=0;m<GLOBAL_app[n].nhclasses;m++){
             printf(" \t \t %s \t ncores: \t %d \t nprocs \t %d\n",GLOBAL_app[n].hclasses[m],GLOBAL_app[n].ncores_class[m],GLOBAL_app[n].nprocs_class[m]);
         }

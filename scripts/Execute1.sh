@@ -24,6 +24,6 @@ for item in $list; do
 done
 
 
-$HOME/LIBS/mpich/bin/mpiexec -genvall -f $HOME/FlexMPI/controller/rankfiles/rankfile -np $1 /tmp/jacobi_IO$4 500 10000 0.00001 100 1 70 -cfile $HOME/FlexMPI/configuration_files/corefiles/corefile -policy-malleability-triggered -lbpolicy-counts 15000 100 -ni 100 -ports $2 $3
+$HOME/LIBS/mpich/bin/mpiexec -genvall -f $HOME/FlexMPI/controller/rankfiles/rankfile -np $1 /tmp/jacobi_IO$4 500 10000 0.00001 1 1 0 $4 -cfile $HOME/FlexMPI/configuration_files/corefiles/corefile -policy-malleability-triggered -lbpolicy-counts 15000 100 -ni 100 -ports $2 $3 -controller $NODENAME -IOaction 2
 
 

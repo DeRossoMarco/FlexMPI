@@ -236,7 +236,7 @@ int MPI_Init (int *argc, char ***argv) {
     EMPI_GLOBAL_corebinding=0;                                // Sets no core binding as default
 
     sprintf(EMPI_GLOBAL_controller,"NULL");                   // Default name of the external server
-    strcpy(EMPI_GLOBAL_application,*argv[0]); // Name of the application
+    strcpy(EMPI_GLOBAL_application,*argv[0]);                 // Name of the application
     
     pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 
@@ -328,7 +328,7 @@ int MPI_Init (int *argc, char ***argv) {
     // Spawned process
        if (parentcomm != MPI_COMM_NULL) {
         
-        // Clarisse Control Point: disconnnect from the server
+        // Clarisse Control Point: disconnect from the server
         //cls_server_disconnect();    
         
         
