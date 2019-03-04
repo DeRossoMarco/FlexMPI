@@ -808,8 +808,7 @@ int command_listener(void *arguments)
         // Sends the connection command to the GUI (only once)
         sendto(s,buf,strlen(buf),0,(struct sockaddr *)&serverAddr,addr_size);  
     }        
-    // Main loop that reads the buffer values
-    
+    // Main loop that reads the buffer values 
     while(1)
     {
         memset(buf, 0, EMPI_COMMBUFFSIZE);
@@ -1524,6 +1523,9 @@ int main (int argc, char** argv)
              killall(-1); // Terminates all the applications
              printf(" Exiting \n \n");
              exit(1);
+        }
+        else if(strlen(initMsg)>4 && initMsg[0]=='N' && initMsg[1]=='E' && initMsg[2]=='W'){
+            
         }
         else{
                
