@@ -254,7 +254,7 @@ int main (int argc, char** argv)
     printf("\n");
     
  	while (fgets (readline,1000,file) != NULL) {
-        if(readline[0]!='#' && readline[0]!='\n'){
+        if(readline[0]!='#' && readline[0]!='\n' && readline[0]!='\r'){
 
             record = strtok (readline, token);  // App name
             if(record==NULL){fprintf (stderr, "\n Error0 parsing %s file \n",argv[2]);exit(1); }    
@@ -264,7 +264,7 @@ int main (int argc, char** argv)
             if(strcmp(record,"cg")==0) class=2;
             if(strcmp(record,"epigraph")==0) class=3;
             if(class==0){
-                fprintf (stderr, "\n Error0 in %s file: application name not valid \n",argv[2]);
+                fprintf (stderr, "\n Error0 in %s file: application name not valid:: %s \n",argv[2],readline);
                 exit(1); 
             }
             strcpy(appname[napp], record);  

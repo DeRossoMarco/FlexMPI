@@ -108,7 +108,7 @@ int MPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype dat
     else{
         iot1=MPI_Wtime();
         iot2=MPI_Wtime();
-        while((iot2-iot1)<EMPI_GLOBAL_dummyIO) iot2=MPI_Wtime(); // Delaty EMPI_GLOBAL_dummyIO seconds. Active waiting.
+        while((iot2-iot1)<EMPI_GLOBAL_dummyIO) iot2=MPI_Wtime(); // Delay EMPI_GLOBAL_dummyIO seconds. Active waiting.
         err=0;
     }
    
