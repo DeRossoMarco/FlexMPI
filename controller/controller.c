@@ -73,7 +73,7 @@ int GLOBAL_reqIO[MAX_APPS];
 double GLOBAL_IOsize[MAX_APPS];
 int GLOBAL_EXEC,GLOBAL_ADHOC, GLOBAL_RECORDEDSPEEDUP, GLOBAL_RECORDEDEXECTIMES,GLOBAL_MAXTHROUGHPUT,GLOBAL_FAIRSCHEDULING_NP,GLOBAL_SPEEDUPSCHEDULING_NP;
 int GLOBAL_CLARISSEONLY,GLOBAL_FAIRSHEDULING,GLOBAL_SPEEDUPSCHEDULING,GLOBAL_IOSCHEDULING;
-int GLOBAL_SCHEDULING_IO;
+int GLOBAL_SCHEDULING_IO,GLOBAL_SCHEDULING_ALGORITHM;
 
 char GLOBAL_FILE[1024],GLOBAL_CONTROLLER_NODE[1024],GUI_NODE[1024];
 int newPort1, newPort2;
@@ -1342,6 +1342,15 @@ int main (int argc, char** argv)
     if(GLOBAL_SCHEDULING_IO==1) printf("\n   # I/O scheduling activated. \n");
     else                        printf("\n   # I/O not scheduled \n");
     
+    GLOBAL_SCHEDULING_ALGORITHM=0;
+    for (n = 0; n < argc; n ++) {
+        if (strcmp(argv[n], "-scheduling_algorithm") == 0) {            
+            GLOBAL_SCHEDULING_ALGORITHM=atoi(argv[n+1]);;
+        }
+    }
+    
+    if(GLOBAL_SCHEDULING_ALGORITHM>0) printf("\n   # I/O scheduling algorithm %d selected. \n",GLOBAL_SCHEDULING_ALGORITHM);
+    
     GLOBAL_FAIRSHEDULING=0;
     for (n = 0; n < argc; n ++) {
         if (strcmp(argv[n], "-fair_scheduling") == 0) {            
@@ -1350,8 +1359,8 @@ int main (int argc, char** argv)
         }
     }
     
-    if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP==-1) printf("\n   # Fair sheduler activated using all the available processors \n");
-    if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP>=0) printf("\n   # Fair sheduler activated using %d processors \n",GLOBAL_FAIRSCHEDULING_NP);
+    if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP==-1) printf("\n   # Fair scheduler activated using all the available processors \n");
+    if(GLOBAL_FAIRSHEDULING==1 && GLOBAL_FAIRSCHEDULING_NP>=0) printf("\n   # Fair scheduler activated using %d processors \n",GLOBAL_FAIRSCHEDULING_NP);
 
     GLOBAL_SPEEDUPSCHEDULING=0;
      for (n = 0; n < argc; n ++) {
@@ -1360,21 +1369,8 @@ int main (int argc, char** argv)
             GLOBAL_SPEEDUPSCHEDULING_NP=atoi(argv[n+1]);
         }
     }
-    if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP==-1) printf("\n   # Speedup-based sheduler activated using all the available processors \n");
-    if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP>=0) printf("\n   # Speedup-based sheduler activated using %d processors \n",GLOBAL_SPEEDUPSCHEDULING_NP);
-    
-    GLOBAL_IOSCHEDULING=0;
-    GLOBAL_IOSCHEDULING_THRESHOLD=-1;
-     for (n = 0; n < argc; n ++) {
-        if (strcmp(argv[n], "-io_scheduling") == 0) {            
-            GLOBAL_IOSCHEDULING=1;
-            GLOBAL_IOSCHEDULING_THRESHOLD=atof(argv[n+1]);
-            if(GLOBAL_IOSCHEDULING_THRESHOLD<0){
-                diep("Error with -io_scheduling val argument. Value should be within the interval [0,1]");
-            }
-        }
-    }
-    if(GLOBAL_IOSCHEDULING==1) printf("\n   # IO-based scheduler activated \n");
+    if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP==-1) printf("\n   # Speedup-based scheduler activated using all the available processors \n");
+    if(GLOBAL_SPEEDUPSCHEDULING==1 && GLOBAL_SPEEDUPSCHEDULING_NP>=0) printf("\n   # Speedup-based scheduler activated using %d processors \n",GLOBAL_SPEEDUPSCHEDULING_NP);
  
     GLOBAL_EARLYTERMINATION=0;
      for (n = 0; n < argc; n ++) {
@@ -1407,7 +1403,7 @@ int main (int argc, char** argv)
     
     for(n=0;n<MAX_APPS;n++)
     {
-      cnt_perf[n]=0;
+     cnt_perf[n]=0;
      cnt_speedup1[n]=0;
      cnt_speedup2[n]=0;
      flag_speedup[n]=0;
