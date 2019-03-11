@@ -45,25 +45,6 @@
 
 static const char *HOME;
 
-struct  applicationset {
-    char appname[100];
-    char hclasses[NCLASES][128]; //host classes
-    char rclasses[NCLASES][128]; //reduce clase definition
-    int  ncores_class[NCLASES];
-    int  nprocs_class[NCLASES];
-    int  newprocs_class[NCLASES];
-    int  nhclasses;
-    char node[255];
-    int  port1;
-    int  port2;
-    int  port3;     // GUI monitor port
-    int  monitor;   // Monitor service (0 no active/1 active but not configures/2 active and configured)
-    int  nsize; 
-    int cpu_intensity;
-    int IO_intensity;
-    int com_intensity;
-    };
-
 struct timeval initial;
 
 struct applicationset GLOBAL_app[MAX_APPS];
@@ -90,7 +71,7 @@ int reset[MAX_APPS];
 double maxOverlap=6,uncertain=2;
  
 // Performance metrics
-double perf[MAX_APPS][NUMSAMPLES][8]; // perf[num_apps][num_samples][num_values]
+double perf[MAX_APPS][NUMSAMPLES][9]; // perf[num_apps][num_samples][num_values]
 double GLOBAL_epoch[NUMSAMPLES];
 int cnt_epoch;
 int cnt_perf[MAX_APPS];           // cnt_perf[num_apps]
@@ -642,6 +623,8 @@ static void Parse_malleability (char *filename1,char  *filename2, int benchmark_
             GLOBAL_app[nfile].port3=-1;
             GLOBAL_app[nfile].monitor=0;
             GLOBAL_app[nfile].newprocs_class[n]=0; 
+            GLOBAL_app[nfile].numiter=NumIter; 
+            
         }
         
         // Increases 0 values in nproc_class (crashes MPI app)
@@ -752,18 +735,19 @@ int command_listener(void *arguments)
     struct timeval timestamp1,timestamp2;
     uint64_t delta_t;
     double delta_long,delta_cpu,tot_IO,tmp_dl,tmp_dt,delayttime;
-    double rtime,ptime,ctime,mflops,count1,count2,iotime,size,datasize;
+    double rtime,ptime,ctime,mflops,count1,count2,iotime,size,diter,datasize;
     char *token;
     FILE *fp;
     char path[1035];
     int flag[MAX_APPS],flag2;
-    char appcmd[1024];
+    char appcmd[1024],nhwpc_1[256],nhwpc_2[256];
     
     struct hostent   *he;
     socklen_t addr_size;   
     
     char * buf     = calloc(EMPI_COMMBUFFSIZE, 1);
     char bashcmd[1024];
+    char *saveptr3;
         
     for(i=0;i<MAX_APPS;i++){
         if(GLOBAL_monitoring)     flag[i]=0; // Monitoring activated
@@ -914,9 +898,9 @@ int command_listener(void *arguments)
                      p_tlong[id]=tmp_dl;
                  }
                  
-                 printf("      IO:: %d [size: %d]  \t T= %.4f \t  dT= %.4f \t cpuT= %.4f\t\t  TotIO= %.4f ",id,(int)size,tstamp[cnt_app[id]-1][id],(tstamp[cnt_app[id]-1][id]-tstamp[cnt_app[id]-2][id]),cput[cnt_app[id]-1][id],tot_IO);
+                 printf("      IO:: %d [size: %d]  \t T= %.4f \t  dT= %.4f \t cpuT= %.4f\t  TotIO= %.4f ",id,(int)size,tstamp[cnt_app[id]-1][id],(tstamp[cnt_app[id]-1][id]-tstamp[cnt_app[id]-2][id]),cput[cnt_app[id]-1][id],tot_IO);
                  //for(i=0;i<4;i++) printf("%f ",p_tstamp[i][id]);
-                 printf(" \t\t LONG= %.4f [ %.4f ] \n",tlong[cnt_app[id]-1][id],p_tlong[id]);
+                 printf(" \t LONG= %.4f [ %.4f ] \t ITER= %d \n",tlong[cnt_app[id]-1][id],p_tlong[id],niter[cnt_app[id]-1][id]);
                  pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
              }
         }
@@ -1124,33 +1108,39 @@ int command_listener(void *arguments)
             id=args->id;
             //printf("               App idd %d sends data from IP %s:%d --> %s",args->id, inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port), buf);
             if(strlen(buf)>12 && buf[0]=='F' && buf[1]=='L' && buf[2]=='X'){
-                token = strtok(buf, " ");
-                if(token!=NULL)  token = strtok(NULL, " ");
+                token = strtok_r(buf, " ",&saveptr3);
+                if(token!=NULL)   token = strtok_r(NULL, " ",&saveptr3);
                 
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      token = strtok_r(NULL, " ",&saveptr3);
                       rtime = atof(token);
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      token = strtok_r(NULL, " ",&saveptr3);
                       ptime = atof(token);
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      token = strtok_r(NULL, " ",&saveptr3);
                       ctime = atof(token);
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      token = strtok_r(NULL, " ",&saveptr3);
                       mflops= atof(token);
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      strcpy(nhwpc_1,token);
+                      token = strtok_r(NULL, " ",&saveptr3);
                       count1= atof(token);
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      strcpy(nhwpc_2,token);                     
+                      token = strtok_r(NULL, " ",&saveptr3);
                       count2= atof(token);
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      token = strtok_r(NULL, " ",&saveptr3);
                       iotime= atof(token);
-                      token = strtok(NULL, " ");
-                      token = strtok(NULL, " ");
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      token = strtok_r(NULL, " ",&saveptr3);
                       size= atof(token);
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      token = strtok_r(NULL, " ",&saveptr3);
+                      diter= atof(token);
+                          
                       pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
                       if(rtime!=0){  // Only counts if nnz values are obtained (real measurenmentnment)
                           perf[id][cnt_perf[id]][0]=rtime;
@@ -1161,6 +1151,7 @@ int command_listener(void *arguments)
                           perf[id][cnt_perf[id]][5]=count1;
                           perf[id][cnt_perf[id]][6]=count2;
                           perf[id][cnt_perf[id]][7]=size;
+                          perf[id][cnt_perf[id]][8]=diter;
                           cnt_perf[id]++;
                           if(cnt_perf[id]>NUMSAMPLES){ // Maximum number of event
                                killall(-1); // Terminates all the applications
@@ -1170,8 +1161,7 @@ int command_listener(void *arguments)
                       }
                       pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
 
-                    printf("             App %d, Metrics colleted:  %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",args->id,rtime,ptime,ctime,mflops,count1,count2,iotime,size);
-                    
+                    printf("             App %d metrics:  %.2f %.2f %.2f %.2e %s\t%.2e %s\t%.2e %.2f Iter: %d NP: %d\n",args->id,rtime,ptime,ctime,mflops,nhwpc_1,count1,nhwpc_2,count2,iotime,(int)diter,(int)size);
              }    
         }
     }

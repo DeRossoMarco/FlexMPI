@@ -68,22 +68,23 @@ typedef struct EMPI_Data_type {
 } EMPI_Data_type;
 
 typedef struct EMPI_Monitor_type {
-    int            count;
-    long long    rtime;
-    long long     ptime;
-    double         ctime;
-    long long    flops;
-    int         hostid;
-    long long    flops_iteration;
-    long long    it_time;
-    long long   hwpc_1;
-    long long   hwpc_2;
-    char        nhwpc_1[EMPI_Monitor_string_size];
-    char        nhwpc_2[EMPI_Monitor_string_size];
-    int         corebinding;
-    int         termination; // Used to flag the program termination
-    int         lbalance; // Used to flag the program termination
-    double         iotime;
+    int             count;
+    long long       rtime;
+    long long       ptime;
+    double          ctime;
+    long long       flops;
+    int             hostid;
+    long long       flops_iteration;
+    long long       it_time;
+    long long       hwpc_1;
+    long long       hwpc_2;
+    char            nhwpc_1[EMPI_Monitor_string_size];
+    char            nhwpc_2[EMPI_Monitor_string_size];
+    int             corebinding;
+    int             termination; // Used to flag the program termination
+    int             lbalance; // Used to flag the program termination
+    double          iotime;
+    int             EMPI_array_alloc;
 } EMPI_Monitor_type;
 
 typedef struct EMPI_Comm_type {
@@ -123,7 +124,7 @@ typedef struct EMPI_Spawn_data {
 
 typedef struct command_flexmpi {
     int    command_n;
-    char * options[NUMBER_OPTIONS];
+    char  *options[NUMBER_OPTIONS];
 } command_flexmpi;
 
 typedef struct service_arguments {

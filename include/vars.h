@@ -331,5 +331,7 @@ int EMPI_GLOBAL_corebindlist[EMPI_max_process][32];
 // Poster thread active
 int EMPI_GLOBAL_posteractive;
 
+// Large-array allocation
+int EMPI_array_alloc;
 
 #endif

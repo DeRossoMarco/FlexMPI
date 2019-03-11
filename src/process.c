@@ -55,18 +55,42 @@ static int EMPI_Remove_process (int rank);
 ****************************************************************************************************************************************/
 static int EMPI_Spawn_process (char *argv[], char *bin, MPI_Info info, int nprocs) {
 
+    int flag = 0;
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Spawn_process in <%s> ***\n", __FILE__);
     #endif
 
     int *mpierr, err;
-
+    int i=0;
+   
+    
     MPI_Comm childcomm;
     MPI_Comm dupcomm;
     
     mpierr=(int*)malloc(nprocs*sizeof(int));
     if(mpierr==NULL) {fprintf (stderr, "Error in EMPI_Spawn_process: not enough memory\n"); return -1;}
+    
+    // Manages the input argument: if the allocation is set, the input argument is changed to the new value
+    
+    while(argv!=MPI_ARGV_NULL && argv[i]!=NULL){
+        if(strcmp(argv[i],"-alloc:0")==0)
+        {
+         if(EMPI_array_alloc>0){
+             flag = 1;
+             argv[i][7]='1'; // The dynamic allocation is done in the main function
+         }
+        }
+        if(strcmp(argv[i],"-alloc:1")==0)
+        {
+            flag = 1;
+        }      
+        i++;
+    }
+    if(EMPI_array_alloc>0 && flag==0){
+        printf(" Error in EMPI_Spawn_process: -alloc:0 option not found and dynamic allocation was set. Use -alloc:0 for enabling dynamic allocation. \n");
+    }
+        
     
     err = MPI_Comm_spawn (bin, argv, nprocs, info, EMPI_root, EMPI_COMM_WORLD, &childcomm, mpierr);
     if (err) {fprintf (stderr, "Error in MPI_Comm_spawn\n"); return err;}

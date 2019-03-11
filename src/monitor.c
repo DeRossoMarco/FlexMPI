@@ -2,7 +2,7 @@
 * @version        FlexMPI v3.1
 * @copyright    Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
 * @license        GNU/GPL, see LICENSE.txt
-* This program is free software: you can redistribute it and/or modify
+* This program is free software: you can redistrie it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
@@ -472,41 +472,9 @@ void EMPI_Monitor_init () {
         }
 
         //add event eventcode_hwpc_1
-        if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_1, &eventcode_hwpc_1 )) != PAPI_OK){
-            printf("Monitoring: Error adding event hwpc_1\n");
-            switch(retval){
-                case PAPI_EINVAL:
-                    printf("Error is PAPI_EINVAL\n");
-                break;
-
-                case PAPI_ENOMEM:
-                    printf("Error is PAPI_ENOMEM\n");
-                break;
-
-                case PAPI_ENOEVST:
-                    printf("Error is PAPI_ENOEVST\n");
-                break;
-
-                case PAPI_EISRUN:
-                    printf("Error is PAPI_EISRUN\n");
-                break;
-
-                case PAPI_ECNFLCT:
-                    printf("Error is PAPI_ECNFLCT\n");
-                break;
-
-                case PAPI_ENOEVNT:
-                    printf("Error is PAPI_ENOEVNT\n");
-                break;
-
-                case PAPI_EBUG:
-                    printf("Error is PAPI_EBUG\n");
-                break;
-            }
-        }               
-        else {        
-            if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_1)) != PAPI_OK){
-                printf("Monitoring: Error adding hwpc_1\n");
+        if(strcmp(EMPI_GLOBAL_PAPI_nhwpc_1,"NULL")!=0){
+            if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_1, &eventcode_hwpc_1 )) != PAPI_OK){
+                printf("Monitoring: Error adding event hwpc_1\n");
                 switch(retval){
                     case PAPI_EINVAL:
                         printf("Error is PAPI_EINVAL\n");
@@ -535,50 +503,51 @@ void EMPI_Monitor_init () {
                     case PAPI_EBUG:
                         printf("Error is PAPI_EBUG\n");
                     break;
-
                 }
-            } else {
-                num_events++;
+            }               
+            else {        
+                if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_1)) != PAPI_OK){
+                    printf("Monitoring: Error adding hwpc_1\n");
+                    switch(retval){
+                        case PAPI_EINVAL:
+                            printf("Error is PAPI_EINVAL\n");
+                        break;
+
+                        case PAPI_ENOMEM:
+                            printf("Error is PAPI_ENOMEM\n");
+                        break;
+
+                        case PAPI_ENOEVST:
+                            printf("Error is PAPI_ENOEVST\n");
+                        break;
+
+                        case PAPI_EISRUN:
+                            printf("Error is PAPI_EISRUN\n");
+                        break;
+
+                        case PAPI_ECNFLCT:
+                            printf("Error is PAPI_ECNFLCT\n");
+                        break;
+
+                        case PAPI_ENOEVNT:
+                            printf("Error is PAPI_ENOEVNT\n");
+                        break;
+
+                        case PAPI_EBUG:
+                            printf("Error is PAPI_EBUG\n");
+                        break;
+
+                    }
+                } else {
+                    num_events++;
+                }
             }
         }
         
-        
-        //add event eventcode_hwpc_2
-        if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_2 )) != PAPI_OK){
-            printf("Monitoring: Error adding event hwpc_2\n");
-            switch(retval){
-                case PAPI_EINVAL:
-                    printf("Error is PAPI_EINVAL\n");
-                break;
-
-                case PAPI_ENOMEM:
-                    printf("Error is PAPI_ENOMEM\n");
-                break;
-
-                case PAPI_ENOEVST:
-                    printf("Error is PAPI_ENOEVST\n");
-                break;
-
-                case PAPI_EISRUN:
-                    printf("Error is PAPI_EISRUN\n");
-                break;
-
-                case PAPI_ECNFLCT:
-                    printf("Error is PAPI_ECNFLCT\n");
-                break;
-
-                case PAPI_ENOEVNT:
-                    printf("Error is PAPI_ENOEVNT\n");
-                break;
-
-                case PAPI_EBUG:
-                    printf("Error is PAPI_EBUG\n");
-                break;
-            }
-        }               
-        else{
-            if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2)) != PAPI_OK){
-                printf("Monitoring: Error adding hwpc_2\n");
+        if(strcmp(EMPI_GLOBAL_PAPI_nhwpc_2,"NULL")!=0){
+            //add event eventcode_hwpc_2
+            if((retval = PAPI_event_name_to_code(EMPI_GLOBAL_PAPI_nhwpc_2, &eventcode_hwpc_2 )) != PAPI_OK){
+                printf("Monitoring: Error adding event hwpc_2\n");
                 switch(retval){
                     case PAPI_EINVAL:
                         printf("Error is PAPI_EINVAL\n");
@@ -607,13 +576,46 @@ void EMPI_Monitor_init () {
                     case PAPI_EBUG:
                         printf("Error is PAPI_EBUG\n");
                     break;
-
                 }
-            } else {
-                num_events++;
+            }               
+            else{
+                if((retval = PAPI_add_event (EMPI_GLOBAL_PAPI_eventSet, eventcode_hwpc_2)) != PAPI_OK){
+                    printf("Monitoring: Error adding hwpc_2\n");
+                    switch(retval){
+                        case PAPI_EINVAL:
+                            printf("Error is PAPI_EINVAL\n");
+                        break;
+
+                        case PAPI_ENOMEM:
+                            printf("Error is PAPI_ENOMEM\n");
+                        break;
+
+                        case PAPI_ENOEVST:
+                            printf("Error is PAPI_ENOEVST\n");
+                        break;
+
+                        case PAPI_EISRUN:
+                            printf("Error is PAPI_EISRUN\n");
+                        break;
+
+                        case PAPI_ECNFLCT:
+                            printf("Error is PAPI_ECNFLCT\n");
+                        break;
+
+                        case PAPI_ENOEVNT:
+                            printf("Error is PAPI_ENOEVNT\n");
+                        break;
+
+                        case PAPI_EBUG:
+                            printf("Error is PAPI_EBUG\n");
+                        break;
+
+                    }
+                } else {
+                    num_events++;
+                }
             }
         }
-        
         
         //start counting
         if((retval = PAPI_start (EMPI_GLOBAL_PAPI_eventSet)) != PAPI_OK){
@@ -692,6 +694,7 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
     int n = 0,new_PAPI_policy=0;
     long long values[3] = {0, 0, 0};
     int eventcode_hwpc_1,eventcode_hwpc_2,bsize;
+    int local_termination;
     
     MPI_Status status;
 
@@ -881,16 +884,17 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
             }
 
             //set monitor parameters
-            monitor.flops   = EMPI_GLOBAL_PAPI_flops;
-            monitor.rtime   = EMPI_GLOBAL_PAPI_rtime;
-            monitor.ptime   = EMPI_GLOBAL_PAPI_ptime;
-            monitor.ctime   = EMPI_GLOBAL_tcomm_interval;
-            monitor.hostid  = EMPI_GLOBAL_hostid;
-            monitor.flops_iteration = EMPI_GLOBAL_PAPI_flops;
-            monitor.it_time = EMPI_GLOBAL_PAPI_rtime;
-            monitor.hwpc_1  = EMPI_GLOBAL_PAPI_hwpc_1;
-            monitor.hwpc_2  = EMPI_GLOBAL_PAPI_hwpc_2;
-            monitor.iotime    = EMPI_GLOBAL_tio_interval;
+            monitor.flops               = EMPI_GLOBAL_PAPI_flops;
+            monitor.rtime               = EMPI_GLOBAL_PAPI_rtime;
+            monitor.ptime               = EMPI_GLOBAL_PAPI_ptime;
+            monitor.ctime               = EMPI_GLOBAL_tcomm_interval;
+            monitor.hostid              = EMPI_GLOBAL_hostid;
+            monitor.flops_iteration     = EMPI_GLOBAL_PAPI_flops;
+            monitor.it_time             = EMPI_GLOBAL_PAPI_rtime;
+            monitor.hwpc_1              = EMPI_GLOBAL_PAPI_hwpc_1;
+            monitor.hwpc_2              = EMPI_GLOBAL_PAPI_hwpc_2;
+            monitor.iotime              = EMPI_GLOBAL_tio_interval;
+            monitor.EMPI_array_alloc    = EMPI_array_alloc;
             len0=strlen(monitor.nhwpc_1)+1;
             len1=strlen(monitor.nhwpc_2)+1;
             
@@ -932,6 +936,8 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
             
             // Check for termination condition (case 5 in command_listener)
             if(smonitor[0].termination==1){
+                printf("\n Terminating abruptly \n\n");
+                sleep(60);
                 MPI_Finalize();
                 exit(0);
             }
@@ -968,6 +974,10 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
                 memcpy(EMPI_GLOBAL_PAPI_nhwpc_1,smonitor[0].nhwpc_1,(size_t)EMPI_Monitor_string_size);
                 memcpy(EMPI_GLOBAL_PAPI_nhwpc_2,smonitor[0].nhwpc_2,(size_t)EMPI_Monitor_string_size);                
             }
+            
+            // Updates the allocation policy
+            EMPI_array_alloc =  smonitor[0].EMPI_array_alloc;
+
             
             // Detects whether a global load balance operation has to be performed in the next callo
             if(smonitor[0].lbalance == 1){
@@ -1023,8 +1033,10 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
             // Copies to the global variable the monitoring information. This global variable is used by the server to send the data via sockets
             pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
             
+            local_termination=EMPI_GLOBAL_monitoring_data.termination;
             EMPI_GLOBAL_monitoring_data = smonitor[0]; // All the threads use the monitor variable of rank0. Including the termination condition
             // Note: 14 lines ahead the perf. counter values are replaced by the process spawn/removal overheads
+            if(*rank == EMPI_root) EMPI_GLOBAL_monitoring_data.termination=local_termination;
             
             // Aggregates the data of all the processes
             for(n=1;n<*size;n++){
@@ -1038,11 +1050,12 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
             }
             
             // Overwrites the monitoring metrics with process spawn/removal overheads
+            /*
             EMPI_GLOBAL_monitoring_data.hwpc_1=(long long int)ceil(EMPI_GLOBAL_lastoverhead_processes*1000); // In ms
             EMPI_GLOBAL_monitoring_data.hwpc_2=(long long int)ceil(EMPI_GLOBAL_lastoverhead_rdata*1000);      // In ms
             strcpy(EMPI_GLOBAL_monitoring_data.nhwpc_1,"ProcessOverhead");
             strcpy(EMPI_GLOBAL_monitoring_data.nhwpc_2,"DataRedistOverhead");
-            
+            */
             EMPI_GLOBAL_monitoring_data.lbalance = 0; // Resets the counter
                         
             pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
@@ -1159,7 +1172,8 @@ void EMPI_Monitor_end (int *rank, int *size, int iter, int maxiter, int *count, 
 
             // David
             if (*rank == EMPI_root) printf ("Iter: %d \t FLOPs: %lld \t MFLOPS:: %lf \t RTIME:: %lf \t PTIME:: %lf \t CTIME:: %lf \t IOTime:: %lf \t Size: %i\n", iter, smonitor[0].flops, (double)((double)smonitor[0].flops)/((double)smonitor[0].rtime), ((double)smonitor[0].rtime)/1000000,((double)smonitor[0].ptime)/1000000, smonitor[0].ctime, smonitor[0].iotime, *size);
-
+            fflush(stdout);
+            
             //reset variables
             EMPI_GLOBAL_PAPI_rtime = EMPI_GLOBAL_PAPI_ptime = EMPI_GLOBAL_PAPI_flops = EMPI_GLOBAL_PAPI_hwpc_1 = EMPI_GLOBAL_PAPI_hwpc_2 = 0;
             

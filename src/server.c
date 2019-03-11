@@ -46,30 +46,35 @@ void check_posix_return(int rc, char* cause)
     }
 }
 
-command_flexmpi parse_command(char * raw_command)
+void parse_command(char * raw_command,struct command_flexmpi *command )
 {
-    char * com;
-    command_flexmpi command;
+    char *saveptr, *token;   
     const char s = ':';
+    int i = 0;
 
     /* get the first token */
-    com = strtok(raw_command, &s);
-    command.command_n = atoi(com);
+    token = strtok_r(raw_command, &s, &saveptr);
+    command->command_n = atoi(token);
     /* walk through other tokens */
-    int i = 0;
     do
     {
         if(i>=NUMBER_OPTIONS){
             diep("Error parsing the message. Increase NUMBER_OPTIONS value.");
         }
         
-        command.options[i] = strtok(NULL, &s);
+        token = strtok_r(NULL, &s, &saveptr);
+                
+        if(token!=NULL){
+            if(command->options[i]!=NULL) free(command->options[i]);
+            command->options[i]=malloc(strlen(token)+2);
+            strcpy(command->options[i],token);
+        }
+        else command->options[i]=NULL;
         i++;
         
 
-    } while (command.options[i - 1] != NULL);
+    } while (token != NULL);
 
-    return command;
 }
 
 
@@ -126,7 +131,7 @@ int service_poster(void* args)
     {
         pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
         active=EMPI_GLOBAL_posteractive; // Check for service_poster termination
-        termination=EMPI_GLOBAL_monitoring_data.termination; // Check por application termination
+        termination=EMPI_GLOBAL_monitoring_data.termination; // Check for application termination
         pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
 
         memset(buf, 0, EMPI_COMMBUFFSIZE);
@@ -140,8 +145,8 @@ int service_poster(void* args)
                 char line_aux[128];
                 pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
                 MPI_Comm_size(EMPI_COMM_WORLD,&size);
-                if(EMPI_GLOBAL_monitoring_data.rtime!=0) sprintf(line, "FLX [%s] rtime %.2f\t ptime %.2f\t ctime %.4f\t Mflops %lld\t %s\t %lld\t %s\t %lld\t iotime %.4f\t size %d \n", hostname, (double)EMPI_GLOBAL_monitoring_data.rtime/1000000, (double)EMPI_GLOBAL_monitoring_data.ptime/1000000, EMPI_GLOBAL_monitoring_data.ctime,(long long int)(EMPI_GLOBAL_monitoring_data.flops/EMPI_GLOBAL_monitoring_data.rtime),EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,EMPI_GLOBAL_monitoring_data.iotime,size);    
-                else sprintf(line, "FLX [%s] rtime %.2f\t ptime %.2f\t ctime %.4f\t Mflops %lld\t %s\t %lld\t %s\t %lld\t iotime %.4f\t size %d \n", hostname, (double)EMPI_GLOBAL_monitoring_data.rtime/1000000, (double)EMPI_GLOBAL_monitoring_data.ptime/1000000, EMPI_GLOBAL_monitoring_data.ctime,(long long int)1,EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,EMPI_GLOBAL_monitoring_data.iotime,size);    
+                if(EMPI_GLOBAL_monitoring_data.rtime!=0) sprintf(line, "FLX [%s] rtime %.2f\t ptime %.2f\t ctime %.4f\t Mflops %lld\t %s\t %lld\t %s\t %lld\t iotime %.4f\t size %d iteration %d \n", hostname, (double)EMPI_GLOBAL_monitoring_data.rtime/1000000, (double)EMPI_GLOBAL_monitoring_data.ptime/1000000, EMPI_GLOBAL_monitoring_data.ctime,(long long int)(EMPI_GLOBAL_monitoring_data.flops/EMPI_GLOBAL_monitoring_data.rtime),EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,EMPI_GLOBAL_monitoring_data.iotime,size,EMPI_GLOBAL_iteration);    
+                else sprintf(line, "FLX [%s] rtime %.2f\t ptime %.2f\t ctime %.4f\t Mflops %lld\t %s\t %lld\t %s\t %lld\t iotime %.4f\t size %d iteration %d\n", hostname, (double)EMPI_GLOBAL_monitoring_data.rtime/1000000, (double)EMPI_GLOBAL_monitoring_data.ptime/1000000, EMPI_GLOBAL_monitoring_data.ctime,(long long int)1,EMPI_GLOBAL_monitoring_data.nhwpc_1,EMPI_GLOBAL_monitoring_data.hwpc_1,EMPI_GLOBAL_monitoring_data.nhwpc_2,EMPI_GLOBAL_monitoring_data.hwpc_2,EMPI_GLOBAL_monitoring_data.iotime,size,EMPI_GLOBAL_iteration);    
             
                 pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
                 hostlist=hostlist->next;
@@ -150,7 +155,7 @@ int service_poster(void* args)
         }
         
         if(termination==1){
-            sprintf(line, "  Application terminated");
+            sprintf(line, "Application terminated");
             
             // Shutdown this thread
             pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
@@ -167,9 +172,13 @@ int service_poster(void* args)
         {
             diep("sendto()");
         }
-        printf("Sent as response: %s \n", buf);
+        printf("Sending > %s \n", buf);
 
         if (termination==0) sleep((int)floor((double)EMPI_GLOBAL_monitoring_data.ptime/1000000)+5);
+        else {
+            sleep(10);
+            MPI_Abort(EMPI_COMM_WORLD,-1);
+        }
     }
     pthread_exit(&EMPI_GLOBAL_posteractive);
 }
@@ -181,6 +190,7 @@ int command_listener(void)
     int i, n, s, slen = sizeof(si_other);
     size_t len0,len1;
     int option=1;
+    struct command_flexmpi command;
 
     //int buffer_length = sizeof(int);
     char * buf     = calloc(EMPI_COMMBUFFSIZE, 1);
@@ -190,7 +200,9 @@ int command_listener(void)
     {
         diep("socket");
     }
-    
+    for(i=0;i<NUMBER_OPTIONS;i++){
+        command.options[i]=NULL;
+    }
     // Reuse socket
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
@@ -221,7 +233,8 @@ int command_listener(void)
         strncpy(bufer_cropped, buf, length);
         strcat(bufer_cropped, "\0"); // David: add termination string
         //Parse string
-        command_flexmpi command = parse_command(bufer_cropped);
+        parse_command(bufer_cropped, &command);
+        
         printf(" Command number is %d\n", command.command_n);
         switch(command.command_n)
         {
@@ -387,7 +400,7 @@ int command_listener(void)
                 active=EMPI_GLOBAL_posteractive;
                 pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
                 
-                if (strcmp (command.options[i],"on") == 0 && active==0){
+                if (strcmp (command.options[0],"on") == 0 && active==0){
 
                     pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
                     EMPI_GLOBAL_posteractive=1;
@@ -413,7 +426,7 @@ int command_listener(void)
                     
 
                 }
-                else{
+                else if (strcmp (command.options[0],"on") != 0){
                     pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
                     EMPI_GLOBAL_posteractive=0;
                     pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);                    
@@ -427,7 +440,6 @@ int command_listener(void)
                 pthread_mutex_lock(&EMPI_GLOBAL_server_lock); // Only the server has an attached thread
                 EMPI_GLOBAL_monitoring_data.termination=1;
                 pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
-                //MPI_Finalize();
                 break;
                 
             case 6:  
@@ -463,7 +475,7 @@ int command_listener(void)
                 if(len0>EMPI_Monitor_string_size-2 || len1>EMPI_Monitor_string_size-2){
                     printf(" Command ignored: name of the events is too large  \n" );
                 }
-                else{
+                else{                  
                   pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
                   memcpy(EMPI_GLOBAL_PAPI_nhwpc_1,command.options[0],len0);
                   memcpy(EMPI_GLOBAL_PAPI_nhwpc_2,command.options[1],len1);
@@ -527,7 +539,7 @@ int command_listener(void)
                 break;
                 
             case 11:  
-                // Command 6: triggered execution for a given iteration
+                // Command 11: triggered execution for a given iteration
                                 
                 pthread_mutex_lock(&EMPI_GLOBAL_server_lock);
                 
@@ -552,6 +564,10 @@ int command_listener(void)
                 pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
                 break;
                 
+            case 12:  
+                // Command 12: displays message from server
+                printf(" Message from server received: %s  \n",buf);
+                break;                
             default:
                 break;
         }

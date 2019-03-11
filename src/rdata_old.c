@@ -74,8 +74,17 @@ void EMPI_DAlltoallv (void *sendbuf, int sendcnt, int sdispl, MPI_Datatype sendt
 
     int sdata[4], *rdata;
 
+    
+    
     MPI_Comm_rank (comm, &rank);
     MPI_Comm_size (comm, &size);
+    
+    // DELME ---------------------------
+    int myrank = rank;    
+    int dtsize;
+    MPI_Type_size(recvtype,&dtsize);
+    printf("Inside : %d \t size: %d \n",myrank,dtsize);
+    // DELME ---------------------------
 
     rdata = (int*) malloc (4 * size * sizeof (int));
     assert (rdata);
@@ -88,16 +97,19 @@ void EMPI_DAlltoallv (void *sendbuf, int sendcnt, int sdispl, MPI_Datatype sendt
     //MPI_Allgather
     PMPI_Allgather (sdata, 4, MPI_INT, rdata, 4, MPI_INT, comm);
 
+    printf("POST! rank: %d \t size: %d \n",myrank,dtsize);
+    fflush(stdout);
+    
     scounts = (int*) calloc (size, sizeof(int));
     sdispls = (int*) calloc (size, sizeof(int));
     rcounts = (int*) calloc (size, sizeof(int));
     rdispls = (int*) calloc (size, sizeof(int));
-    
 
     for (nrank = 0; nrank < size; nrank ++) {
 
         //Send data
         //MIN (rdispl + rcount, sdispl + scount) - MAX (rdispl, sdispl)
+        // 
         scounts[nrank] = EMPI_MACRO_MIN (rdata[(nrank*4)+3] + rdata[(nrank*4)+2], rdata[(rank*4)+1] + rdata[(rank*4)])
                        - EMPI_MACRO_MAX (rdata[(nrank*4)+3], rdata[(rank*4)+1]);
         sdispls[nrank] = EMPI_MACRO_MAX (rdata[(nrank*4)+3], rdata[(rank*4)+1]) - sdispl;
@@ -113,16 +125,98 @@ void EMPI_DAlltoallv (void *sendbuf, int sendcnt, int sdispl, MPI_Datatype sendt
         if (rcounts[nrank] < 0) { rcounts[nrank] = 0; rdispls[nrank] = 0; }
     }
 
+    //exchange data
+    
 
-       
+   
+    if(recvtype!=MPI_DOUBLE){
+        /*
+        for (nrank = 0; nrank < 16; nrank ++) {
+            if(myrank!=nrank){
+                scounts[nrank] = 0;
+                sdispls[nrank] = 0;
+                rcounts[nrank] = 0;
+                rdispls[nrank] = 0;                
+            }
+            else{
+                if(scounts[nrank]>10) scounts[nrank]=scounts[nrank]-10;
+                if(sdispls[nrank]>10) sdispls[nrank]=sdispls[nrank]-10;
+                if(rcounts[nrank]>10) rcounts[nrank]=rcounts[nrank]-10;
+                if(rdispls[nrank]>10) rdispls[nrank]=rdispls[nrank]-10;
+            }
+        }
+        */
+        
+        if(myrank==0){
+            for (nrank = 12; nrank < 16; nrank ++) {
+                scounts[nrank] = 0;
+                //scounts[nrank] = 1;
+                sdispls[nrank] = 0;
+                rcounts[nrank] = 0;
+                rdispls[nrank] = 0;
+            }
+        }
+        if(myrank<12 && myrank>0){
+             for (nrank = 12; nrank < 16; nrank ++) {
+                scounts[nrank] = 0;
+                sdispls[nrank] = 0;
+                rcounts[nrank] = 0;
+                rdispls[nrank] = 0;
+            }
+            
+        }
+        if(myrank>=12){
+                scounts[0] = 0;
+                sdispls[0] = 0;
+                rcounts[0] = 0;
+                //rcounts[0] = 1;
+                rdispls[0] = 0;
+
+            for (nrank = 1; nrank < 16; nrank ++) {
+                scounts[nrank] = 0;
+                sdispls[nrank] = 0;
+                rcounts[nrank] = 0;
+                rdispls[nrank] = 0;
+            }
+           
+        }   
+        
+    }
+    
+    
+    if(dtsize>10){
+        for (nrank = 0; nrank < size; nrank ++) {
+            printf(" --> %d -> \t %d: \t %d \t %d \t %d \t %d \n",rank,nrank,scounts[nrank],sdispls[nrank],rcounts[nrank],rdispls[nrank]);
+        }
+        //printf(" ==> %d :: %p %d *** %p %d \n",rank,sendbuf,(int)malloc_usable_size (sendbuf),recvbuf,(int)malloc_usable_size (recvbuf));
+    }
+    //MPI_Datatype MPI_BLOCK;
+    //MPI_Type_contiguous(5000, MPI_DOUBLE, &MPI_BLOCK);
+    //MPI_Type_commit(&MPI_BLOCK);
+    //fflush(stdout);
+    
+    // DELME ---------------------------
+    
+    int err=0;
     PMPI_Alltoallv (sendbuf, scounts, sdispls, sendtype, recvbuf, rcounts, rdispls, recvtype, comm);
+    
+    
+    //if(dtsize>10) PMPI_Alltoallv (sendbuf, scounts, sdispls, sendtype, recvbuf, rcounts, rdispls, recvtype, comm);
+    //else err=PMPI_Alltoallv (sendbuf, scounts, sdispls, MPI_DOUBLE, recvbuf, rcounts, rdispls, MPI_DOUBLE, comm);
+    //char string[1000];
+    //int resultlen;
+    //MPI_Error_string( err, string, &resultlen );
+    //err=PMPI_Alltoallv (sendbuf, scounts, sdispls, MPI_BLOCK, recvbuf, rcounts, rdispls, MPI_BLOCK, comm);
+    //printf(" XX [%d] ---> %s \n",rank,string);
+    //PMPI_Alltoallv (sendbuf, scounts, sdispls, MPI_DOUBLE, recvbuf, rcounts, rdispls, MPI_DOUBLE, comm);
+    //PMPI_Alltoallv (sendbuf, scounts, sdispls, sendtype, recvbuf, rcounts, rdispls, recvtype, comm);
 
     //release memory
     free (scounts);
     free (sdispls);
     free (rcounts);
     free (rdispls);
-
+    
     free (rdata);
 
     //debug
@@ -516,14 +610,14 @@ static void EMPI_Rdata_dense_disjoint (EMPI_Data_type *data, int scount, int sdi
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Rdata_dense_disjoint in <%s> ***\n", __FILE__);
     #endif
 
+    // Datatype for large matrices
+    MPI_Datatype MPI_BLOCK;
+    
     //send and recv buffers
     void *sendbuf = NULL;
     void *recvbuf = NULL;
 
     int btype;
-
-    // Datatype for large matrices
-    MPI_Datatype MPI_BLOCK;
 
     MPI_Type_size (data->datatype, &btype);
 
@@ -534,22 +628,25 @@ static void EMPI_Rdata_dense_disjoint (EMPI_Data_type *data, int scount, int sdi
         recvbuf = malloc (rcount * data->dim * btype);
         assert (recvbuf);
     }
-
+        
     //Alltoallv dense data structure
-     if(data->dim<20000){
+    int myrank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+    printf(" [%d] Function EMPI_Rdata_dense_disjoint called for %s \n",myrank,data->id);
+    if(strcmp(data->id,"matrix")!=0){
         EMPI_DAlltoallv (sendbuf, scount*data->dim, sdispl*data->dim, data->datatype, recvbuf, rcount*data->dim, rdispl*data->dim, data->datatype, EMPI_COMM_WORLD);
     }
     else{
-
+        printf(" A ---> %d - %d %d %d %d \n",data->dim,scount,sdispl,rcount,rdispl);
         fflush(stdout);
         MPI_Type_contiguous(data->dim, data->datatype, &MPI_BLOCK);
         MPI_Type_commit(&MPI_BLOCK);
         EMPI_DAlltoallv (sendbuf, scount, sdispl, MPI_BLOCK, recvbuf, rcount, rdispl, MPI_BLOCK, EMPI_COMM_WORLD);
+        //EMPI_DAlltoallv (sendbuf, scount*(data->dim/1), sdispl*(data->dim/1000), data->datatype, recvbuf, rcount*(data->dim/1), rdispl*(data->dim/1000), data->datatype, EMPI_COMM_WORLD);
         MPI_Type_free(&MPI_BLOCK);
+        printf(" ---> New layout completed\n");
         fflush(stdout);
-
     }
-
     if (data->stype == EMPI_DENSE)
         //register new shared data structure
         EMPI_Register_dense (data->id, recvbuf, data->datatype, data->size, data->mapping);
@@ -586,6 +683,9 @@ static void EMPI_Rdata_dense_shared (EMPI_Data_type *data, int scount, int sdisp
     void *sendbuf = NULL;
     void *recvbuf = NULL;
 
+    // Datatype for large matrices
+    MPI_Datatype MPI_BLOCK;
+
     int btype;
 
     MPI_Type_size (data->datatype, &btype);
@@ -596,6 +696,11 @@ static void EMPI_Rdata_dense_shared (EMPI_Data_type *data, int scount, int sdisp
     assert (recvbuf);
 
     //DAlltoallv dense data structure
+     //Alltoallv dense data structure
+    int myrank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+    printf(" [%d] Function EMPI_Rdata_dense_shared called for %s \n",myrank,data->id);
+    
     EMPI_DAlltoallv (sendbuf, scount*data->dim, sdispl*data->dim, data->datatype, recvbuf, data->size*data->dim, 0, data->datatype, EMPI_COMM_WORLD);
 
     if (data->stype == EMPI_DENSE)
@@ -975,10 +1080,10 @@ void EMPI_Get_shared (int *it) {
     #endif
 
     int type;
-
+    
     // Datatype for large matrices
     MPI_Datatype MPI_BLOCK;
-
+    
     //Get process type
     EMPI_Get_type (&type);
 
@@ -1020,24 +1125,32 @@ void EMPI_Get_shared (int *it) {
                 case EMPI_DENSE:
 
                     recvbuf = EMPI_Get_addr(data->id);
+                    
+                    int myrank;
+                    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+                    printf(" [%d] Function EMPI_Get_shared called for %s \n",myrank,data->id);
 
                     if (data->mapping == EMPI_DISJOINT){
-                        fflush(stdout);
+
                         //Alltoallv shared data (dense matrix or vector)
-                        
-                        if(data->dim<20000){
-                            EMPI_DAlltoallv (NULL, -1, -1, data->datatype, recvbuf, count*data->dim, displ*data->dim, data->datatype, EMPI_COMM_WORLD);
+                        if(strcmp(data->id,"matrix")!=0){
+                           EMPI_DAlltoallv (NULL, -1, -1, data->datatype, recvbuf, count*data->dim, displ*data->dim, data->datatype, EMPI_COMM_WORLD);
                         }
                         else{
-
+                            printf(" B ---> %d - %d %d %d %d \n",data->dim,0,0,count,displ);
+                            fflush(stdout);
                             MPI_Type_contiguous(data->dim, data->datatype, &MPI_BLOCK);
                             int err;
-                            err=MPI_Type_commit(&MPI_BLOCK);;
+                            err=MPI_Type_commit(&MPI_BLOCK);
+                            //char string[1000];
+                            //int resultlen;
+                            //MPI_Error_string( err, string, &resultlen );
+                            //EMPI_DAlltoallv (NULL, -1, -1, data->datatype, recvbuf, count*data->dim, displ*data->dim, data->datatype, EMPI_COMM_WORLD);
                             EMPI_DAlltoallv (NULL, -1, -1, MPI_BLOCK, recvbuf, count, displ, MPI_BLOCK, EMPI_COMM_WORLD);   
-
+                            //EMPI_DAlltoallv (NULL, -1, -1, data->datatype, recvbuf, count*(data->dim/1), displ*(data->dim/1000), data->datatype, EMPI_COMM_WORLD);
                             MPI_Type_free(&MPI_BLOCK);
+                            printf(" ---> New layout child COMPLETED\n");
                             fflush(stdout);
-                       
                         }
                     }
                     else if (data->mapping == EMPI_SHARED)
@@ -1049,8 +1162,7 @@ void EMPI_Get_shared (int *it) {
             }
 
             data = data->next;
-        }
-              
+        }    
         
     }
 
@@ -1063,7 +1175,6 @@ void EMPI_Get_shared (int *it) {
     #endif
 }
 
-
 /****************************************************************************************************************************************
 *
 *    'EMPI_alloc'
@@ -1072,11 +1183,6 @@ void EMPI_Get_shared (int *it) {
 
 void EMPI_alloc()
 {
-    //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG:enter:EMPI_alloc in <%s> ***\n", __FILE__);
-    #endif    
-    
     if (EMPI_array_alloc == 0 ){
         EMPI_array_alloc = 1;
         return;
@@ -1084,11 +1190,6 @@ void EMPI_alloc()
     if (EMPI_array_alloc == 1 ){
         EMPI_array_alloc = 2;
     }
-    
-    //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG:exit:EMPI_alloc in <%s> ***\n", __FILE__);
-    #endif    
     
     return;
 }
@@ -1101,17 +1202,7 @@ void EMPI_alloc()
 
 int EMPI_status_alloc()
 {   
-    //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG:enter:EMPI_status_alloc in <%s> ***\n", __FILE__);
-    #endif    
-    
-     //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG:exit:EMPI_status_alloc in <%s> ***\n", __FILE__);
-    #endif     
     return(EMPI_array_alloc);
-
 }
 
 

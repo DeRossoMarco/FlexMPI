@@ -108,10 +108,10 @@ int MPI_Init (int *argc, char ***argv) {
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Init in <%s> ***\n", __FILE__);
     #endif
 
-    int err, rank, size, tag=997, rprocs, rdata[4], n;
+    int err, rank, size, tag=997, rprocs, rdata[4], n, i;
     int provided;
     
-    int blocklen [16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, EMPI_Monitor_string_size, EMPI_Monitor_string_size,1,1,1,1};
+    int blocklen [17] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, EMPI_Monitor_string_size, EMPI_Monitor_string_size,1,1,1,1,1};
     //int blocklen_energy [2] = {1, 1};
     int energy_rank = -1;
 
@@ -123,7 +123,7 @@ int MPI_Init (int *argc, char ***argv) {
 
     MPI_Status mpi_status;
 
-    MPI_Datatype EMPI_monitor_struct_type [16] = {MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_DOUBLE, MPI_LONG_LONG, MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_CHAR, MPI_CHAR, MPI_INT,MPI_INT, MPI_INT, MPI_DOUBLE};
+    MPI_Datatype EMPI_monitor_struct_type [17] = {MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_DOUBLE, MPI_LONG_LONG, MPI_INT, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_LONG_LONG, MPI_CHAR, MPI_CHAR, MPI_INT,MPI_INT, MPI_INT, MPI_DOUBLE,MPI_INT};
 
     // Used for configuring the socket (controller communication)
     struct sockaddr_in si_me;
@@ -222,9 +222,10 @@ int MPI_Init (int *argc, char ***argv) {
     EMPI_GLOBAL_spawn_data.dirty          = 0;
     EMPI_GLOBAL_spawn_data.hostid         = NULL;
     EMPI_GLOBAL_spawn_data.nprocs         = NULL;
-    //EMPI_GLOBAL_spawn_data.name           = NULL;
+    //EMPI_GLOBAL_spawn_data.name         = NULL;
     
-    
+    EMPI_array_alloc                      = 0;
+   
     // We need to protect it because the server access to EMPI_GLOBAL_PAPI_nhwpc_* when option 7 is used
     pthread_mutex_lock(&EMPI_GLOBAL_server_lock); // Only the server has an attached thread
     // Default values for hwpc_1 and hwpc_2 hardware counters
@@ -280,9 +281,11 @@ int MPI_Init (int *argc, char ***argv) {
     displs[14] = address - start_address;
     MPI_Get_address (&(EMPI_GLOBAL_monitor.iotime), &address);
     displs[15] = address - start_address;
+    MPI_Get_address (&(EMPI_GLOBAL_monitor.EMPI_array_alloc), &address);
+    displs[16] = address - start_address;
     
     //MPI datatype
-    MPI_Type_create_struct (16, blocklen, displs, EMPI_monitor_struct_type, &EMPI_Monitor_Datatype);
+    MPI_Type_create_struct (17, blocklen, displs, EMPI_monitor_struct_type, &EMPI_Monitor_Datatype);
     MPI_Type_commit (&EMPI_Monitor_Datatype);
 
     // MPI_Type_create_struct (2, blocklen, displs, EMPI_monitor_struct_type, &EMPI_Monitor_Datatype);
@@ -307,8 +310,8 @@ int MPI_Init (int *argc, char ***argv) {
     //set process status
     EMPI_GLOBAL_status = EMPI_ACTIVE;
 
-       //Get parent
-       err = MPI_Comm_get_parent (&parentcomm);
+    //Get parent
+    err = MPI_Comm_get_parent (&parentcomm);
 
     if (err) fprintf (stderr, "Error in MPI_Comm_get_parent\n");
 
@@ -321,21 +324,26 @@ int MPI_Init (int *argc, char ***argv) {
     #if (EMPI_DBGMODE == EMPI_DBG_DETAILED)
         fprintf (stdout, "\n*** DEBUG_MSG::call::EMPI_Parse_options in line %d function EMPI_Init in <%s> ***\n", __LINE__, __FILE__);
     #endif
+    
+    
+    // Manages the input argument:
+    for(i=0;i<*argc;i++){
+        if(strcmp((*argv)[i],"-alloc:1")==0){
+            EMPI_alloc();
+        }
+    }
 
+    
     //Parse EMPI global options
     EMPI_Parse_options (*argc, *argv);
     
     // Spawned process
-       if (parentcomm != MPI_COMM_NULL) {
-        
-        // Clarisse Control Point: disconnect from the server
-        //cls_server_disconnect();    
-        
+    if (parentcomm != MPI_COMM_NULL) {            
         
         int *countdispl = NULL;
 
-              //Process type
-              EMPI_GLOBAL_type = EMPI_SPAWNED;
+        //Process type
+        EMPI_GLOBAL_type = EMPI_SPAWNED;
 
         //debug
         #if (EMPI_DBGMODE == EMPI_DBG_DETAILED)
@@ -344,17 +352,17 @@ int MPI_Init (int *argc, char ***argv) {
 
 
         
-           //Merge intercommunicator
-           err = MPI_Intercomm_merge (parentcomm, 1, &EMPI_COMM_WORLD);
-           if (err) fprintf (stderr, "Error in MPI_Intercomm_merge\n");
+        //Merge intercommunicator
+        err = MPI_Intercomm_merge (parentcomm, 1, &EMPI_COMM_WORLD);
+        if (err) fprintf (stderr, "Error in MPI_Intercomm_merge\n");
 
         //debug
         #if (EMPI_DBGMODE == EMPI_DBG_DETAILED)
             fprintf (stdout, "\n*** DEBUG_MSG::call::MPI_Comm_disconnect in line %d function EMPI_Init in <%s> ***\n", __LINE__, __FILE__);
         #endif
 
-           //Disconnect aux communicator
-           err = MPI_Comm_disconnect (&parentcomm);
+        //Disconnect aux communicator
+        err = MPI_Comm_disconnect (&parentcomm);
         if (err) fprintf (stderr, "Error in MPI_Comm_disconnect\n");
             
         //Recv rprocs, minprocs, iteration and hostid. The MPI_Send command is executed in EMPI_Spawn function. 
@@ -544,10 +552,27 @@ int MPI_Finalize (void) {
     long long values[3] = {0, 0, 0};
     char socketcmd[1024]; 
 
+    char nodename[1024],command[1024];
+    int nodename_len;
+    
+    
+    
+    
+    
+    
     // Sends the termination command to the controller
     if(EMPI_GLOBAL_socket!=-1){  // Only rank=0 process has a value != -1
-        sprintf(socketcmd,"Application terminated");
-        sendto(EMPI_GLOBAL_socket,socketcmd,strlen(socketcmd),0,(struct sockaddr *)&EMPI_GLOBAL_controller_addr,sizeof(EMPI_GLOBAL_controller_addr));
+        MPI_Get_processor_name(nodename,&nodename_len);
+        sprintf(command,"nping --udp -g 5000 -p %d  -c 1 %s --data-string \"%s\">/dev/null",EMPI_GLOBAL_recvport,nodename,"4:on");
+        printf("\n sending %s \n",command);
+        system(command);
+        sleep(30);
+        sprintf(command,"nping --udp -g 5000 -p %d  -c 1 %s --data-string \"%s\">/dev/null",EMPI_GLOBAL_recvport,nodename,"5:");
+        printf("\n sending %s \n",command);
+        system(command);
+        sleep(120);     
+        //sprintf(socketcmd,"Application terminated");
+        //sendto(EMPI_GLOBAL_socket,socketcmd,strlen(socketcmd),0,(struct sockaddr *)&EMPI_GLOBAL_controller_addr,sizeof(EMPI_GLOBAL_controller_addr));
     }
     
     
@@ -780,6 +805,7 @@ void EMPI_Get_type (int *type) {
 ****************************************************************************************************************************************/
 static void EMPI_Parse_cfile (int argc, char **argv) {
 
+    char *saveptr;
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Parse_cfile in <%s> ***\n", __FILE__);
@@ -847,7 +873,7 @@ static void EMPI_Parse_cfile (int argc, char **argv) {
                 hostname = EMPI_FALSE;
 
                 //Get hostname
-                record = strtok (readline, token);
+                record = strtok_r (readline, token, &saveptr);
                 //find repeated hostname
                 while (aux != NULL) {
 
@@ -890,14 +916,14 @@ static void EMPI_Parse_cfile (int argc, char **argv) {
                     strcpy (hostlist->hostname, record);
 
                     //Get maxprocs
-                    record = strtok (NULL, token);
+                    record = strtok_r (NULL, token, &saveptr);
                     if (record != NULL)    hostlist->maxprocs = atoi(record);
                     else hostlist->maxprocs = EMPI_MAX_NPROCS;
 
                     printf("Host %s maxprocs is %d. ID is %d\n", hostlist->hostname, hostlist->maxprocs, hostlist->id);
 
                     //Get class
-                    record = strtok (NULL, token);
+                    record = strtok_r (NULL, token, &saveptr);
                     if (record != NULL)    strcpy (hostlist->hclass, record);
 
                     //Check host class
@@ -923,12 +949,12 @@ static void EMPI_Parse_cfile (int argc, char **argv) {
                     }
 
                     //Get cost
-                    record = strtok (NULL, token);
+                    record = strtok_r (NULL, token, &saveptr);
                     if (record != NULL)    hostlist->cost = atof(record);
                     else hostlist->cost = 0.0; //default cost
 
                     //Get mflops
-                    record = strtok (NULL, token);
+                    record = strtok_r (NULL, token, &saveptr);
                     if (record != NULL)    hostlist->mflops = atoi(record);
                     else hostlist->mflops = -1; //default mflops
 
@@ -1715,7 +1741,8 @@ static void EMPI_Create_system_classes (void) {
 *
 ****************************************************************************************************************************************/
 static void EMPI_Parse_malleability (void) {
-
+    char *saveptr;
+    
     //debug
     #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
         fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_Parse_malleability in <%s> ***\n", __FILE__);
@@ -1741,7 +1768,7 @@ static void EMPI_Parse_malleability (void) {
         ntok = 0;
 
         //Get rm
-        record = strtok (readline, token);
+        record = strtok_r (readline, token, &saveptr);
 
         EMPI_GLOBAL_listrm[nrm] = atoi(record);
 
@@ -1750,7 +1777,7 @@ static void EMPI_Parse_malleability (void) {
 
         for (nprocs_class = 0; nprocs_class < 10; nprocs_class++) EMPI_GLOBAL_nprocs_class[nrm][nprocs_class] = 0;
 
-        record = strtok (NULL, token);
+        record = strtok_r (NULL, token, &saveptr);
 
         while (record != NULL) {
 
@@ -1772,7 +1799,7 @@ static void EMPI_Parse_malleability (void) {
                 }
             }
             
-            record = strtok (NULL, token);
+            record = strtok_r (NULL, token, &saveptr);
             ntok ++;
         }
 

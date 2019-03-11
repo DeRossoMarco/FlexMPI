@@ -40,7 +40,7 @@ void check_posix_return(int rc, char* cause);
 *   'parse_command'
 *
 ****************************************************************************************************************************************/
-command_flexmpi parse_command(char * raw_command);
+void parse_command(char * raw_command, struct command_flexmpi * command);
 /****************************************************************************************************************************************
 *
 *   'service_poster'
