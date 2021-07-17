@@ -284,7 +284,7 @@ void jacobi (int dim, int *rank, int *size, double *A, double *b, double *x, dou
             datasize=(double)(count*dim*local_size)/(1024*1024); // In MB
             EMPI_SCALE_BW=EMPI_DESIRED_BW/((*size)*datasize/(iot2-iot1));
             if (*rank==0) printf("\n ********************************************************************** \n"); 
-            if (*rank==0) printf(" [%d] Write completed in %f seconds with %.2f Mb, Bandwidth: %.2f Mb/s  %.2f  ScaleBW %f \n\n",*rank,(iot2-iot1),datasize,(*size)*datasize/(iot2-iot1),EMPI_DESIRED_BW,vi eEMPI_SCALE_BWEMPI_SCALE_BW);
+            if (*rank==0) printf(" [%d] Write completed in %f seconds with %.2f Mb, Bandwidth: %.2f Mb/s  %.2f  ScaleBW %f \n\n",*rank,(iot2-iot1),datasize,(*size)*datasize/(iot2-iot1),EMPI_DESIRED_BW,EMPI_SCALE_BW);
             
 
             MPI_Type_free(&MPI_INTERVAL);            
