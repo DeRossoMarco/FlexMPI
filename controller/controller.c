@@ -44,7 +44,6 @@
 #include "controller.h"
 
 static const char *HOME;
-
 struct timeval initial;
 
 struct applicationset GLOBAL_app[MAX_APPS];
@@ -1337,8 +1336,7 @@ int main (int argc, char** argv)
         if (strcmp(argv[n], "-scheduling_algorithm") == 0) {            
             GLOBAL_SCHEDULING_ALGORITHM=atoi(argv[n+1]);;
         }
-    }
-    
+    }  
     if(GLOBAL_SCHEDULING_ALGORITHM>0) printf("\n   # I/O scheduling algorithm %d selected. \n",GLOBAL_SCHEDULING_ALGORITHM);
     
     GLOBAL_FAIRSHEDULING=0;

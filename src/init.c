@@ -907,7 +907,7 @@ static void EMPI_Parse_cfile (int argc, char **argv) {
                     EMPI_GLOBAL_nhosts ++;
 
                     //Set nprocs
-                    if (hostlist->id == 0) hostlist->nprocs = 1;
+                    if (hostlist->id == 0) hostlist->nprocs = 0;
                     else hostlist->nprocs = 0;
 
                     hostlist->iniprocs = hostlist->nprocs;
