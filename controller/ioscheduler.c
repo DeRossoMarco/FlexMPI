@@ -5,18 +5,17 @@
 void IO_scheduler(){
      int n, cnt;
      
+     
+     /*
      // This code prints several performance metrics
-     printf("          E2:  Application CPU time (secs.):        ");
+     printf("          E2:  Application CPU time (secs.): \t");
      for(n=0;n<GLOBAL_napps;n++) printf(" \t %5.2f ",cput[cnt_app[n]-1][n]);
-     printf("\n          E2:  Application I/O time (secs.):      ");
+     printf("\n          E2:  Application I/O time (secs.): \t");
      for(n=0;n<GLOBAL_napps;n++) printf(" \t %5.2f ",tlong[cnt_app[n]-1][n]);
      printf("\n          E2:  Application I/O data size (Bytes): ");
      for(n=0;n<GLOBAL_napps;n++) printf(" \t %.2E ",GLOBAL_IOsize[n]);
-     printf("\n          E2:  Application iteration number:      ");
-     for(n=0;n<GLOBAL_napps;n++) printf(" \t %.2d \t",niter[cnt_app[n]-1][n]);
-     printf("\n          E2:  Application total iterations:      ");
-     for(n=0;n<GLOBAL_napps;n++) printf(" \t %.2d ",GLOBAL_app[n].numiter);
-     printf("\n");
+     */
+     
      // Displays the current applications with the I/O blocked
      cnt=0;
      for(n=0;n<GLOBAL_napps;n++){
@@ -28,7 +27,7 @@ void IO_scheduler(){
      for(n=0;n<GLOBAL_napps;n++){
          if(GLOBAL_reqIO[n]==1)      printf(" [ rank= %d ]",n);    
      }
-     printf("\n");
+     //printf("\n");
 
      // Alternative A: releases all the blocked applications and they will compete for the I/O access.
      if(0){
