@@ -1,7 +1,7 @@
 /**
-* @version        FlexMPI v3.1
-* @copyright    Copyright (C) 2018 Universidad Carlos III de Madrid. All rights reserved.
-* @license        GNU/GPL, see LICENSE.txt
+* @version		FlexMPI v1.4
+* @copyright	Copyright (C) 2017 Universidad Carlos III de Madrid. All rights reserved.
+* @license		GNU/GPL, see LICENSE.txt
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
@@ -19,11 +19,11 @@
 */
 
 /****************************************************************************************************************************************
- *                                                                                                                                        *
- *    FLEX-MPI                                                                                                                            *
- *                                                                                                                                        *
- *    File:       memalloc.c                                                                                                                *
- *                                                                                                                                        *
+ *																																		*
+ *	FLEX-MPI																															*
+ *																																		*
+ *	File:       memalloc.c																												*
+ *																																		*
  ****************************************************************************************************************************************/
 
 /* include */
@@ -31,74 +31,74 @@
 
 /****************************************************************************************************************************************
 *
-*    'EMPI_malloc'
+*	'EMPI_malloc'
 *
 ****************************************************************************************************************************************/
 void *EMPI_malloc (size_t size) {
 
-    //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_malloc [NOT EXIT] in <%s> ***\n", __FILE__);
-    #endif
+	//debug
+	#if (EMPI_DBGMODE > EMPI_DBG_QUIET)
+		fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_malloc [NOT EXIT] in <%s> ***\n", __FILE__);
+	#endif
 
-    return malloc (size);
+	return malloc (size);
 }
 
 /****************************************************************************************************************************************
 *
-*    'EMPI_calloc'
+*	'EMPI_calloc'
 *
 ****************************************************************************************************************************************/
 void *EMPI_calloc (size_t nmemb, size_t size) {
 
-    //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_calloc [NOT EXIT] in <%s> ***\n", __FILE__);
-    #endif
+	//debug
+	#if (EMPI_DBGMODE > EMPI_DBG_QUIET)
+		fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_calloc [NOT EXIT] in <%s> ***\n", __FILE__);
+	#endif
 
-    return calloc (nmemb, size);
+	return calloc (nmemb, size);
 }
 
 /****************************************************************************************************************************************
 *
-*    'EMPI_free'
+*	'EMPI_free'
 *
 ****************************************************************************************************************************************/
 void EMPI_free (void *addr, char *id) {
 
-    //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_free in <%s> ***\n", __FILE__);
-    #endif
+	//debug
+	#if (EMPI_DBGMODE > EMPI_DBG_QUIET)
+		fprintf (stdout, "\n*** DEBUG_MSG::enter::EMPI_free in <%s> ***\n", __FILE__);
+	#endif
 
-    EMPI_Data_type *data = NULL;
-    
-    data = EMPI_GLOBAL_Data;
-    
-    while (data != NULL) {
+	EMPI_Data_type *data = NULL;
+	
+	data = EMPI_GLOBAL_Data;
+	
+	while (data != NULL) {
 
-        if (strcmp(data->id, id)==0) {
+		if (strcmp(data->id, id)==0) {
 
-            if ((data->stype == EMPI_DENSE)||(data->stype == EMPI_VECTOR)) {
-    
-                //get addr
-                addr = data->addr;
-    
-                if (addr != NULL) free (addr);
-        
-            } else if (data->stype == EMPI_SPARSE){
-    
-                if (data->addr_row != NULL) free (data->addr_row);
-                if (data->addr_col != NULL) free (data->addr_col);
-                if (data->addr_val != NULL) free (data->addr_val);
-            }
-        }
-    
-        data = data->next;        
-    }
-    
-    //debug
-    #if (EMPI_DBGMODE > EMPI_DBG_QUIET)
-        fprintf (stdout, "\n*** DEBUG_MSG::exit::EMPI_free in <%s> ***\n", __FILE__);
-    #endif
+			if ((data->stype == EMPI_DENSE)||(data->stype == EMPI_VECTOR)) {
+	
+				//get addr
+				addr = data->addr;
+	
+				if (addr != NULL) free (addr);
+		
+			} else if (data->stype == EMPI_SPARSE){
+	
+				if (data->addr_row != NULL) free (data->addr_row);
+				if (data->addr_col != NULL) free (data->addr_col);
+				if (data->addr_val != NULL) free (data->addr_val);
+			}
+		}
+	
+		data = data->next;		
+	}
+	
+	//debug
+	#if (EMPI_DBGMODE > EMPI_DBG_QUIET)
+		fprintf (stdout, "\n*** DEBUG_MSG::exit::EMPI_free in <%s> ***\n", __FILE__);
+	#endif
 }
