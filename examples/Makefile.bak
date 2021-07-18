@@ -2,7 +2,7 @@ LIBEMPI_DIR=$(HOME)/FlexMPI
 
 
 # For a system-level (non-local) installation of the libraries
-MPICC=/usr/bin/mpicc
+MPICC=mpicc
 
 # Uncomment for a local installation of the libraries
 #PAPI_DIR=$(HOME)/LIBS/papi
