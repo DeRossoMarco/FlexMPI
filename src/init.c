@@ -595,8 +595,7 @@ int MPI_Finalize (void) {
         pthread_mutex_unlock(&EMPI_GLOBAL_server_lock);
         sleep(1);
     }
-    
-    sleep(10);
+
     
 
     if ((EMPI_GLOBAL_mpolicy == EMPI_LBALANCE) || (EMPI_GLOBAL_lbalance == EMPI_TRUE)) {

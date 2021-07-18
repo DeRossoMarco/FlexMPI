@@ -81,7 +81,7 @@ void parse_command(char * raw_command,struct command_flexmpi *command )
 int service_poster(void* args)
 {
     char line[1024];
-    char * buf     = (char *)calloc(EMPI_COMMBUFFSIZE, 1);
+    char * buf     = calloc(EMPI_COMMBUFFSIZE, 1);
     int index,length,size,resul=1;
     char hostname[1024];
     int hostnamelen;

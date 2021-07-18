@@ -16,7 +16,7 @@
 * also available in <http://www.gnu.org/licenses/gpl.html>.
 *
 * See COPYRIGHT.txt for copyright notices and details.
-*/
+*/ 
 
 /****************************************************************************************************************************************
  *                                                                                                                                        *
@@ -93,7 +93,7 @@ int flag_speedup[MAX_APPS];
 
 // Global values
 int Tconf=2; // Global reconfiguration time
-int terminated_app,GLOBAL_pending;
+int terminated_app,GLOBAL_pending = 1;
 int GLOBAL_terminated_app_id[MAX_APPS];
 int GLOBAL_totalcores;
 int GLOBAL_DEBUG;
@@ -901,10 +901,11 @@ int EMPI_GLOBAL_perform_load_balance;
 // This function reads the workload files and creates the environment (conf files + execution scripts) and runs the applications
 int parse_command (char *readline, char *command, int appid) 
 {
-    char nodelist[1024],*record;
+    char nodelist[1024];
+    char *record = NULL;
     char token1[]=":";
     int nprocs=0,error;
-    char *save_ptr1;
+    char *save_ptr1 = NULL;
     int corespernode;
     
     // printf(" --> Input  command: %s \n",readline);
@@ -1014,7 +1015,11 @@ void Parse_malleability (char *filename1, char  *filename2, char *command, int b
 
     for(n=0;n<NCLASES;n++){
         LOCAL_ncores[n]=0;
+        memset(LOCAL_hclasses[n],0,256);
+        memset(LOCAL_rclasses[n],0,256);        
     }
+    
+    
     
     // Read and parse node file that contains the node file names
     // Creates the global node structure if it was not created before
@@ -1246,7 +1251,12 @@ void Parse_malleability (char *filename1, char  *filename2, char *command, int b
             GLOBAL_app[nfile].port1=port1;
             GLOBAL_app[nfile].port2=port2;
             if(benchmark_mode) GLOBAL_app[nfile].port3=-1;
-            if(benchmark_mode) GLOBAL_app[nfile].monitor=0;
+            if(benchmark_mode){
+                GLOBAL_app[nfile].monitor=0;
+            }
+            else{
+                GLOBAL_app[nfile].monitor=1;
+            }
             GLOBAL_app[nfile].newprocs_class[n]=0; 
             GLOBAL_app[nfile].app_profile=profile; 
             GLOBAL_app[nfile].app_class=appclass; 
@@ -2189,7 +2199,8 @@ int command_listener(void *arguments)
     
     int i, s, n, m, slen = sizeof(si_other),id,local_terminated_app,tmp,local_reconf,iter;
     int WS,busyIO,local_pending,avail;
-    struct arg_struct1 *args = arguments;
+    struct arg_struct1 *args2 = arguments;
+    struct arg_struct1  args;
     struct timeval timestamp1,timestamp2;
     uint64_t delta_t;
     double delta_long,delta_cpu,tot_IO,tmp_dl,tmp_dt,delayttime;
@@ -2206,6 +2217,11 @@ int command_listener(void *arguments)
     
     char * buf = calloc(EMPI_COMMBUFFSIZE, 1);
     char bashcmd[1024];
+    
+    // Updates args structure
+    args.id    = args2->id;
+    args.port2 = args2->port2;
+    
     
     // Elastic search variables
     // CURL *curl=NULL;
@@ -2229,7 +2245,7 @@ int command_listener(void *arguments)
     }
     memset((char *) &si_me, 0, sizeof(si_me));
     si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(args->port2);
+    si_me.sin_port = htons(args.port2);
     si_me.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (bind(s, (struct sockaddr *)&si_me, sizeof(si_me))==-1)
@@ -2254,7 +2270,7 @@ int command_listener(void *arguments)
         memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));  
         addr_size = sizeof(serverAddr); 
         
-        id=args->id;
+        id=args.id;
         sprintf(buf,"./app:1000:2018/02/26-11:22@format@%d@%d",id,GLOBAL_GUI_ListenerPort);
         printf("  --- Connection with graphic interface at %s port %d with string %s\n",GUI_NODE,GLOBAL_GUI_PORT,buf);    
         
@@ -2267,8 +2283,7 @@ int command_listener(void *arguments)
     {
         memset(buf, 0, EMPI_COMMBUFFSIZE);
         int length = recvfrom(s, buf, EMPI_COMMBUFFSIZE, 0, (struct sockaddr *)&si_other, (socklen_t *)&slen);
-        if(GLOBAL_DEBUG) printf("  Message received [%d]: %s \n",args->id,buf);
-        //printf("  Message received [%d]: %s \n",args->id,buf);
+        if(GLOBAL_DEBUG) printf("  Message received [%d]: %s %d \n",args.id,buf,length);
         if (length >1)
         {      
             // IO operation
@@ -2294,7 +2309,7 @@ int command_listener(void *arguments)
                     delta_cpu=atof(token);
                     
                     
-                    id=args->id;
+                    id=args.id;
 
                     // Activates monitoring the first time
                     if(flag[id]==0){
@@ -2302,7 +2317,7 @@ int command_listener(void *arguments)
                         appAddr.sin_family = AF_INET;
                         appAddr.sin_port = htons(GLOBAL_app[id].port1);
                         if ( (he = gethostbyname(GLOBAL_app[id].node) ) == NULL ) {
-                            diep("Error resolving application name");
+                            diep("Error resolving application name2");
                             exit(1); /* error */
                         }
                     
@@ -2328,7 +2343,6 @@ int command_listener(void *arguments)
                     // Counts the delayed execution time
                     delayttime=GLOBAL_delayt1[id];
                     if(GLOBAL_delayt1[id]!=0) GLOBAL_delayt1[id]=0;
-                    
                     niter[cnt_app[id]][id]=iter;
                     tstamp[cnt_app[id]][id]=(double)delta_t/1000-delta_long+delayttime; // The message is sent after the I/O, thus we have to substract its duration + the delay time of the operation
                     tlong[cnt_app[id]][id]=delta_long;
@@ -2363,7 +2377,7 @@ int command_listener(void *arguments)
                          }
                          p_tlong[id]=tmp_dl;
                      }
-                     
+    
                      printf("      IO:: %d [size: %d]  \t T= %.2f \t  dT= %.2f \t cpuT= %.2f\t\t  TotIO= %.2f ",id,(int)size,tstamp[cnt_app[id]-1][id],(tstamp[cnt_app[id]-1][id]-tstamp[cnt_app[id]-2][id]),cput[cnt_app[id]-1][id],tot_IO);
                      //for(i=0;i<4;i++) printf("%f ",p_tstamp[i][id]);
                      printf(" \t\t LONG= %.2f [ %.2f ] \n",tlong[cnt_app[id]-1][id],p_tlong[id]);
@@ -2372,18 +2386,18 @@ int command_listener(void *arguments)
             }
             else if(strcmp(buf,"Application terminated")==0)
             {
-             printf("       %d termination data from %s:%d --> %s \n",args->id, inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port), buf);
+             printf("       %d termination data from %s:%d --> %s \n",args.id, inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port), buf);
              pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
-             if(GLOBAL_app[args->id].terminated==0) terminated_app++; 
-             GLOBAL_terminated_app_id[args->id]=1;
+             if(GLOBAL_app[args.id].terminated==0) terminated_app++; 
+             GLOBAL_terminated_app_id[args.id]=1;
              local_terminated_app=terminated_app;
-             printf("\n ** [%d] application terminated %d out of %d \n",args->id,terminated_app,GLOBAL_bachapps);
+             printf("\n ** [%d] application terminated %d out of %d \n",args.id,terminated_app,GLOBAL_bachapps);
              pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);    // Creates one thread per application
              
              // Notifies the termination external manager
              if(GLOBAL_forwarding){
                 char command[1024];
-                sprintf(command,"nping --udp -p %d -c 1 %s --data-string \"%d\" > /dev/null",9911,GLOBAL_CONTROLLER_NODE,args->id);
+                sprintf(command,"nping --udp -p %d -c 1 %s --data-string \"%d\" > /dev/null",9911,GLOBAL_CONTROLLER_NODE,args.id);
                 printf(" Sending notification %s \n",command);
                 execute_command(command,0);   
              }
@@ -2392,7 +2406,7 @@ int command_listener(void *arguments)
              local_pending=GLOBAL_pending;
              
              // Updates the allocation tables            
-             n=args->id;
+             n=args.id;
              printf("  Terminated application: %s, id: %d, Port1 (listener): %d Port2 (Sender): %d\n",GLOBAL_app[n].appname,n,GLOBAL_app[n].port1,GLOBAL_app[n].port2);
 
              for(m=0;m<GLOBAL_app[n].nhclasses;m++){
@@ -2456,7 +2470,7 @@ int command_listener(void *arguments)
             } 
             else if(strncmp(buf, "ACQIO", 5)==0)
             {
-                id=args->id;
+                id=args.id;
                 
                 /* gets the amount of written data */
                 token = strtok_r(buf, " ",&saveptr2);
@@ -2549,7 +2563,7 @@ int command_listener(void *arguments)
                 appAddr.sin_family = AF_INET;
                 appAddr.sin_port = htons(GLOBAL_app[id].port1);
                 if ( (he = gethostbyname(GLOBAL_app[id].node) ) == NULL ) {
-                    diep("Error resolving application name");
+                    diep("Error resolving application name1");
                 }
                     
                 appAddr.sin_addr=*(struct in_addr *) he->h_addr;
@@ -2591,19 +2605,22 @@ int command_listener(void *arguments)
             }
             else{
                 
-                id=args->id;
-                // Checks for connection with the GUI
+                id=args.id;
+                // Monitor connection
+                
                 pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);
-                if(GLOBAL_app[id].monitor==1){
+                if(0 && GLOBAL_app[id].monitor==1){
                    serverAddr.sin_port = htons(GLOBAL_app[id].port3);
                    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));  
                    addr_size = sizeof(serverAddr); 
                    GLOBAL_app[id].monitor=2;
+                   
+                  // Sends the connection command
+                  sendto(s,buf,strlen(buf),0,(struct sockaddr *)&serverAddr,addr_size);
                 }
                 pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
                 
-                // Sends the connection command to the GUI 
-                sendto(s,buf,strlen(buf),0,(struct sockaddr *)&serverAddr,addr_size);
+
                 // ****************
                
                 
@@ -2676,13 +2693,13 @@ int command_listener(void *arguments)
                             
                             // curl_es_app(curl, ip_es, nodename, id, time_stamp, rtime, ptime, ctime, mflops, "counter1", count1, "counter2", count2, iotime, size, diter);
                             
-                            printf("             App %d metrics:  %.2f %.2f %.2f %.2e %s\t%.2e %s\t%.2e %.2f Iter: %d NP: %d\n",args->id,rtime,ptime,ctime,mflops,nhwpc_1,count1,nhwpc_2,count2,iotime,(int)diter,(int)size);
+                            printf("             App %d metrics:  %.2f %.2f %.2f %.2e %s\t%.2e %s\t%.2e %.2f Iter: %d NP: %d\n",args.id,rtime,ptime,ctime,mflops,nhwpc_1,count1,nhwpc_2,count2,iotime,(int)diter,(int)size);
                         }
                         
                  }    
             }
         }
-}
+    }
 }
 
 // Returns the id of the first created application
@@ -2707,7 +2724,7 @@ void init_app(char *initMsg, int nump){
     else{
         deploy=0;
     }
-          
+        
     pthread_mutex_lock(&CONTROLLER_GLOBAL_server_lock);           
     last_GLOBAL_napps=GLOBAL_napps;
     pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
@@ -2752,7 +2769,7 @@ void init_app(char *initMsg, int nump){
     Parse_malleability(NULL,"../run/nodefile2.dat",initMsg,0,deploy); 
 
     int error;
-
+    
     if(nump>0){
         // Waits until the initial processes have been created.
         // Only works when one application is created
@@ -2836,27 +2853,30 @@ void init_app(char *initMsg, int nump){
     system("date");
     //strcpy(counters,"PAPI_L3_TCM");
     strcpy(counters,"");
+    
+    
     printf("\n \n --- Creating the monitor threads \n");
     
-    
-    for(n=last_GLOBAL_napps;n<GLOBAL_napps;n++){ 
-        args3[n].id = n;
-        strcpy(args3[n].counter_list,counters);
-        args3[n].new_perf_metrics = init_perf_metrics;
-        args3[n].init=1;
-        rc = pthread_attr_init(&attr3[n]);
-        check_posix_return(rc, "Initializing attribute");
-        rc = pthread_create(&thread3[n], &attr3[n], (void*)&application_monitor ,(void *)(&args3[n]));
-        check_posix_return(rc, "Creating application-monitor thread ");
-        sleep(5); 
-    }
-    
-    // Wait for the monitor completion
-    if(GLOBAL_EXEC)
-    {    
-     for(n=last_GLOBAL_napps;n<GLOBAL_napps;n++){   
-            (void) pthread_join(thread3[n], NULL);
-     }
+    if(1){
+        for(n=last_GLOBAL_napps;n<GLOBAL_napps;n++){ 
+            args3[n].id = n;
+            strcpy(args3[n].counter_list,counters);
+            args3[n].new_perf_metrics = init_perf_metrics;
+            args3[n].init=1;
+            rc = pthread_attr_init(&attr3[n]);
+            check_posix_return(rc, "Initializing attribute");
+            rc = pthread_create(&thread3[n], &attr3[n], (void*)&application_monitor ,(void *)(&args3[n]));
+            check_posix_return(rc, "Creating application-monitor thread ");
+            sleep(5); 
+        }
+        
+        // Wait for the monitor completion
+        if(GLOBAL_EXEC)
+        {    
+         for(n=last_GLOBAL_napps;n<GLOBAL_napps;n++){   
+                (void) pthread_join(thread3[n], NULL);
+         }
+        }
     }
     
     // Exclusive node placement and removal
@@ -2944,11 +2964,10 @@ int main (int argc, char** argv)
     time_t rawtime;
     time (&rawtime);
     int length;
-    FILE *file1;
-    char readline[1000],counters[1024],resultnode[512];
+    char counters[1024],resultnode[512];
     struct addrinfo hints;
     struct addrinfo* res=0;
-    int initialSocket,err,nodefile;
+    int initialSocket,err;
     int result[2];
 
     // Get the initial time value
@@ -3203,27 +3222,6 @@ int main (int argc, char** argv)
      flag_speedup[n]=0; 
     }     
     pthread_mutex_unlock(&CONTROLLER_GLOBAL_server_lock);
-    
-    // Opens workload file 
-    nodefile=1;
-    if ((file1 = fopen ("workload.dat", "r")) == NULL) {
-        fprintf (stderr, "\nError opening nodefile in Parse_malleability %s \n","workload.dat");
-        nodefile=0;
-    }
-    
-    // Executes each application
-    if(nodefile==1){
-        while (fscanf (file1, "%s\n", readline) != EOF) {
-            init_app(readline,0);  // Application start
-        }
-        fclose(file1);
-    }
-    
-     
-    if(GLOBAL_EXEC==0){
-        printf("\n\n Execution scripts created.... terminating application.\n\n");
-        exit(1);
-    }
     
     printf("\n Entering execution phase ..... \n\n");
        
@@ -3483,7 +3481,6 @@ int main (int argc, char** argv)
             
             // Parses the destination application
             sprintf(stringport,"%d",GLOBAL_app[n].port1);
-            printf("\n ---> %s - %d",GLOBAL_app[n].node,GLOBAL_app[n].port1);
             err=getaddrinfo(GLOBAL_app[n].node,stringport,&hints,&res);
 
             if (err<0) {
