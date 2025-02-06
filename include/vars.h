@@ -28,6 +28,11 @@
 
 #ifndef _EMPI_VARS_H_
 #define _EMPI_VARS_H_
+#ifdef VARIABLES
+#define EXTERN
+#else
+#define EXTERN extern
+#endif
 
     
 /* include */
@@ -101,237 +106,237 @@ static const int EMPI_COMMNUMOPTIONS     = 10;
 
 // Communication variables
 
-int EMPI_GLOBAL_recvport;
-int EMPI_GLOBAL_sendport;
+EXTERN int EMPI_GLOBAL_recvport;
+EXTERN int EMPI_GLOBAL_sendport;
 
 
 /* global variables */
-int EMPI_GLOBAL_nhosts;
+EXTERN int EMPI_GLOBAL_nhosts;
 
-double EMPI_GLOBAL_percentage;
+EXTERN double EMPI_GLOBAL_percentage;
 
-int EMPI_GLOBAL_lbalance;
+EXTERN int EMPI_GLOBAL_lbalance;
 
-int EMPI_GLOBAL_maxprocs;
-int EMPI_GLOBAL_minprocs;
+EXTERN int EMPI_GLOBAL_maxprocs;
+EXTERN int EMPI_GLOBAL_minprocs;
 
-double EMPI_GLOBAL_comm_prev;
+EXTERN double EMPI_GLOBAL_comm_prev;
 
-double EMPI_GLOBAL_over_si;
+EXTERN double EMPI_GLOBAL_over_si;
 
-int EMPI_GLOBAL_niter;
-int EMPI_GLOBAL_niter_lb;
+EXTERN int EMPI_GLOBAL_niter;
+EXTERN int EMPI_GLOBAL_niter_lb;
 
-int EMPI_GLOBAL_wpolicy; //workload policy
+EXTERN int EMPI_GLOBAL_wpolicy; //workload policy
 
-int EMPI_GLOBAL_lbpolicy; //load balancing policy
+EXTERN int EMPI_GLOBAL_lbpolicy; //load balancing policy
 
-int *EMPI_GLOBAL_vcounts;
-int *EMPI_GLOBAL_displs;
+EXTERN int *EMPI_GLOBAL_vcounts;
+EXTERN int *EMPI_GLOBAL_displs;
 
-int EMPI_GLOBAL_capture_comms;
+EXTERN int EMPI_GLOBAL_capture_comms;
 
-int EMPI_GLOBAL_mpolicy; //monitor policy
+EXTERN int EMPI_GLOBAL_mpolicy; //monitor policy
 
-int EMPI_GLOBAL_concurrency;
+EXTERN int EMPI_GLOBAL_concurrency;
 
-int EMPI_GLOBAL_hostid; //host id where the process is being executed
+EXTERN int EMPI_GLOBAL_hostid; //host id where the process is being executed
 
-int EMPI_GLOBAL_nhclasses; //number of host classes
+EXTERN int EMPI_GLOBAL_nhclasses; //number of host classes
 
-char EMPI_GLOBAL_hclasses[100][128]; //host classes
+EXTERN char EMPI_GLOBAL_hclasses[100][128]; //host classes
 
-char EMPI_GLOBAL_controller[512];   // external server name
-char EMPI_GLOBAL_application[512];  // application name
+EXTERN char EMPI_GLOBAL_controller[512];   // external server name
+EXTERN char EMPI_GLOBAL_application[512];  // application name
 
-int EMPI_GLOBAL_lbalance_disabled;
+EXTERN int EMPI_GLOBAL_lbalance_disabled;
 
-int EMPI_GLOBAL_perform_load_balance;
+EXTERN int EMPI_GLOBAL_perform_load_balance;
 
 //Malleability
-int EMPI_GLOBAL_nextrm;
-int EMPI_GLOBAL_listrm[100];
-int EMPI_GLOBAL_nprocs_class[100][10];
+EXTERN int EMPI_GLOBAL_nextrm;
+EXTERN int EMPI_GLOBAL_listrm[100];
+EXTERN int EMPI_GLOBAL_nprocs_class[100][10];
 
-int EMPI_GLOBAL_initnc;
+EXTERN int EMPI_GLOBAL_initnc;
 
-int EMPI_GLOBAL_status; //active or removed status
+EXTERN int EMPI_GLOBAL_status; //active or removed status
 
-int EMPI_GLOBAL_type; //spawned or native
+EXTERN int EMPI_GLOBAL_type; //spawned or native
 
-int EMPI_GLOBAL_allocation;
+EXTERN int EMPI_GLOBAL_allocation;
 
-double EMPI_GLOBAL_obj_texec;
-double EMPI_GLOBAL_cum_cost;
-double EMPI_GLOBAL_cum_time;
-double EMPI_GLOBAL_obj_texec_threshold;
+EXTERN double EMPI_GLOBAL_obj_texec;
+EXTERN double EMPI_GLOBAL_cum_cost;
+EXTERN double EMPI_GLOBAL_cum_time;
+EXTERN double EMPI_GLOBAL_obj_texec_threshold;
 
-double EMPI_GLOBAL_spawn_cost;
-double EMPI_GLOBAL_remove_cost;
+EXTERN double EMPI_GLOBAL_spawn_cost;
+EXTERN double EMPI_GLOBAL_remove_cost;
 
-int EMPI_GLOBAL_spolicy; //spawn policy: available nodes or occupied nodes
+EXTERN int EMPI_GLOBAL_spolicy; //spawn policy: available nodes or occupied nodes
 
-int EMPI_GLOBAL_iteration;
+EXTERN int EMPI_GLOBAL_iteration;
 
-double EMPI_GLOBAL_tcomp;   //aggregated computation time
-double EMPI_GLOBAL_tcomm;   //aggregated communication time
-double EMPI_GLOBAL_tover;   //aggregated overhead time of the monitor functionality
-double EMPI_GLOBAL_tio;     //aggregated communication time
+EXTERN double EMPI_GLOBAL_tcomp;   //aggregated computation time
+EXTERN double EMPI_GLOBAL_tcomm;   //aggregated communication time
+EXTERN double EMPI_GLOBAL_tover;   //aggregated overhead time of the monitor functionality
+EXTERN double EMPI_GLOBAL_tio;     //aggregated communication time
 
-double EMPI_GLOBAL_tcomm_itinit;
-double EMPI_GLOBAL_tcomm_interval;
+EXTERN double EMPI_GLOBAL_tcomm_itinit;
+EXTERN double EMPI_GLOBAL_tcomm_interval;
 
-double EMPI_GLOBAL_tio_itinit;
-double EMPI_GLOBAL_tio_interval;
+EXTERN double EMPI_GLOBAL_tio_itinit;
+EXTERN double EMPI_GLOBAL_tio_interval;
 
-double EMPI_GLOBAL_tcomp_ini;
-double EMPI_GLOBAL_tcomp_fin;
+EXTERN double EMPI_GLOBAL_tcomp_ini;
+EXTERN double EMPI_GLOBAL_tcomp_fin;
 
-double EMPI_GLOBAL_tcomm_ini;
-double EMPI_GLOBAL_tcomm_fin;
+EXTERN double EMPI_GLOBAL_tcomm_ini;
+EXTERN double EMPI_GLOBAL_tcomm_fin;
 
-double EMPI_GLOBAL_tio_last;    // Timestamp of the previous I/O operation
-double EMPI_GLOBAL_tio_ini;     // Timestamp before the I/O operation
-double EMPI_GLOBAL_tio_fin;     // Timestamp after the I/O operation
-int    EMPI_GLOBAL_socket;      // Socket for sending control data
-struct sockaddr_in EMPI_GLOBAL_controller_addr;  // Address of the controller 
-double EMPI_GLOBAL_dummyIO;     // When <0 performs MPI I/O; When >=0 performs dummy I/O of EMPI_GLOBAL_dummyIO seconds 
+EXTERN double EMPI_GLOBAL_tio_last;    // Timestamp of the previous I/O operation
+EXTERN double EMPI_GLOBAL_tio_ini;     // Timestamp before the I/O operation
+EXTERN double EMPI_GLOBAL_tio_fin;     // Timestamp after the I/O operation
+EXTERN int    EMPI_GLOBAL_socket;      // Socket for sending control data
+EXTERN struct sockaddr_in EMPI_GLOBAL_controller_addr;  // Address of the controller 
+EXTERN double EMPI_GLOBAL_dummyIO;     // When <0 performs MPI I/O; When >=0 performs dummy I/O of EMPI_GLOBAL_dummyIO seconds 
 
-double EMPI_GLOBAL_iterative_ini;
-double EMPI_GLOBAL_iterative_end;
+EXTERN double EMPI_GLOBAL_iterative_ini;
+EXTERN double EMPI_GLOBAL_iterative_end;
 
-long long EMPI_GLOBAL_tover_ini;
+EXTERN long long EMPI_GLOBAL_tover_ini;
 
-double EMPI_GLOBAL_threshold;
+EXTERN double EMPI_GLOBAL_threshold;
 
-double EMPI_GLOBAL_Load_threshold;
+EXTERN double EMPI_GLOBAL_Load_threshold;
 
-int EMPI_GLOBAL_self_adaptation;
+EXTERN int EMPI_GLOBAL_self_adaptation;
 
 //FIXME
-double EMPI_GLOBAL_alpha;
-double EMPI_GLOBAL_beta;
-double EMPI_GLOBAL_bandwidth;
-double EMPI_GLOBAL_gamma;
+EXTERN double EMPI_GLOBAL_alpha;
+EXTERN double EMPI_GLOBAL_beta;
+EXTERN double EMPI_GLOBAL_bandwidth;
+EXTERN double EMPI_GLOBAL_gamma;
 
-float EMPI_GLOBAL_sampling_time;
+EXTERN float EMPI_GLOBAL_sampling_time;
 
-int EMPI_GLOBAL_hsteps;
-int *EMPI_GLOBAL_hmon;
-int EMPI_GLOBAL_hpos;
+EXTERN int EMPI_GLOBAL_hsteps;
+EXTERN int *EMPI_GLOBAL_hmon;
+EXTERN int EMPI_GLOBAL_hpos;
 
-int EMPI_GLOBAL_nc;
+EXTERN int EMPI_GLOBAL_nc;
 
-int EMPI_GLOBAL_PAPI_init;
-long long EMPI_GLOBAL_PAPI_rtime;
-long long EMPI_GLOBAL_PAPI_rtime_init;
-long long EMPI_GLOBAL_PAPI_ptime;
-long long EMPI_GLOBAL_PAPI_ptime_init;
-long long EMPI_GLOBAL_PAPI_flops;
-long long EMPI_GLOBAL_PAPI_hwpc_1;
-long long EMPI_GLOBAL_PAPI_hwpc_2;
-char EMPI_GLOBAL_PAPI_nhwpc_1[EMPI_Monitor_string_size];
-char EMPI_GLOBAL_PAPI_nhwpc_2[EMPI_Monitor_string_size];
+EXTERN int EMPI_GLOBAL_PAPI_init;
+EXTERN long long EMPI_GLOBAL_PAPI_rtime;
+EXTERN long long EMPI_GLOBAL_PAPI_rtime_init;
+EXTERN long long EMPI_GLOBAL_PAPI_ptime;
+EXTERN long long EMPI_GLOBAL_PAPI_ptime_init;
+EXTERN long long EMPI_GLOBAL_PAPI_flops;
+EXTERN long long EMPI_GLOBAL_PAPI_hwpc_1;
+EXTERN long long EMPI_GLOBAL_PAPI_hwpc_2;
+EXTERN char EMPI_GLOBAL_PAPI_nhwpc_1[EMPI_Monitor_string_size];
+EXTERN char EMPI_GLOBAL_PAPI_nhwpc_2[EMPI_Monitor_string_size];
 
-int EMPI_GLOBAL_PAPI_eventSet;
+EXTERN int EMPI_GLOBAL_PAPI_eventSet;
 
-int EMPI_GLOBAL_corebinding;
+EXTERN int EMPI_GLOBAL_corebinding;
 
-int EMPI_GLOBAL_delayio;
-double EMPI_GLOBAL_delayiotime;
+EXTERN int EMPI_GLOBAL_delayio;
+EXTERN double EMPI_GLOBAL_delayiotime;
 
-long long EMPI_GLOBAL_PAPI_rtime_lb;
-long long EMPI_GLOBAL_PAPI_ptime_lb;
-long long EMPI_GLOBAL_PAPI_flops_lb;
-long long EMPI_GLOBAL_PAPI_hwpc_1_lb;
-long long EMPI_GLOBAL_PAPI_hwpc_2_lb;
-double EMPI_GLOBAL_tcomm_interval_lb;
+EXTERN long long EMPI_GLOBAL_PAPI_rtime_lb;
+EXTERN long long EMPI_GLOBAL_PAPI_ptime_lb;
+EXTERN long long EMPI_GLOBAL_PAPI_flops_lb;
+EXTERN long long EMPI_GLOBAL_PAPI_hwpc_1_lb;
+EXTERN long long EMPI_GLOBAL_PAPI_hwpc_2_lb;
+EXTERN double EMPI_GLOBAL_tcomm_interval_lb;
 
-double EMPI_GLOBAL_overhead_rpolicy;
-double EMPI_GLOBAL_overhead_lbalance;
-double EMPI_GLOBAL_overhead_processes;         // accumulated overhead of process creation/destruction
-double EMPI_GLOBAL_lastoverhead_processes;  // last overhead of the last operation of process creation/destruction
-double EMPI_GLOBAL_overhead_rdata;             // accumulated overhead of data redistribution
-double EMPI_GLOBAL_lastoverhead_rdata;         // last overhead of data redistribution
-double EMPI_GLOBAL_overhead_aux;
+EXTERN double EMPI_GLOBAL_overhead_rpolicy;
+EXTERN double EMPI_GLOBAL_overhead_lbalance;
+EXTERN double EMPI_GLOBAL_overhead_processes;         // accumulated overhead of process creation/destruction
+EXTERN double EMPI_GLOBAL_lastoverhead_processes;  // last overhead of the last operation of process creation/destruction
+EXTERN double EMPI_GLOBAL_overhead_rdata;             // accumulated overhead of data redistribution
+EXTERN double EMPI_GLOBAL_lastoverhead_rdata;         // last overhead of data redistribution
+EXTERN double EMPI_GLOBAL_overhead_aux;
 
-long long *EMPI_GLOBAL_track_flops;
+EXTERN long long *EMPI_GLOBAL_track_flops;
 
-long long *EMPI_GLOBAL_track_rtime;
+EXTERN long long *EMPI_GLOBAL_track_rtime;
 
-int EMPI_GLOBAL_Adaptability_policy;
+EXTERN int EMPI_GLOBAL_Adaptability_policy;
 
-int EMPI_GLOBAL_PAPI_numevents;
+EXTERN int EMPI_GLOBAL_PAPI_numevents;
 
 
 
-double EMPI_GLOBAL_ENERGY_aggregated_final;
-double EMPI_GLOBAL_ENERGY_aggregated_start;
-double EMPI_GLOBAL_ENERGY_aggregated_init;
-double EMPI_GLOBAL_ENERGY_aggregated_end;
-double EMPI_GLOBAL_ENERGY_aggregated_elapsed;
-double EMPI_GLOBAL_ENERGY_aggregated_elapsed_final;
-double EMPI_GLOBAL_ENERGY_aggregated_power;
-double EMPI_GLOBAL_ENERGY_aggregated_power_final;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_final;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_start;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_init;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_end;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_elapsed;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_elapsed_final;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_power;
+EXTERN double EMPI_GLOBAL_ENERGY_aggregated_power_final;
 
-double * EMPI_GLOBAL_power_monitoring_data;
+EXTERN double * EMPI_GLOBAL_power_monitoring_data;
 
-double EMPI_GLOBAL_ENERGY_monitoring_temp[4];
+EXTERN double EMPI_GLOBAL_ENERGY_monitoring_temp[4];
 
-int EMPI_GLOBAL_debug_comms;
-int EMPI_GLOBAL_energy_rank;
-int EMPI_GLOBAL_nhosts_aux;
-int EMPI_GLOBAL_energy_eficiency_op_mode;
-int EMPI_GLOBAL_non_exclusive;
+EXTERN int EMPI_GLOBAL_debug_comms;
+EXTERN int EMPI_GLOBAL_energy_rank;
+EXTERN int EMPI_GLOBAL_nhosts_aux;
+EXTERN int EMPI_GLOBAL_energy_eficiency_op_mode;
+EXTERN int EMPI_GLOBAL_non_exclusive;
 
-long long EMPI_GLOBAL_PAPI_flops_iteration;
-long long EMPI_GLOBAL_PAPI_it_time;
-long long EMPI_GLOBAL_PAPI_real_flops_iteration;
+EXTERN long long EMPI_GLOBAL_PAPI_flops_iteration;
+EXTERN long long EMPI_GLOBAL_PAPI_it_time;
+EXTERN long long EMPI_GLOBAL_PAPI_real_flops_iteration;
 
-long long t1;
-long long t2;
-int flag;
+EXTERN long long t1;
+EXTERN long long t2;
+EXTERN int flag;
 
-int EMPI_GLOBAL_flag_dynamic;
+EXTERN int EMPI_GLOBAL_flag_dynamic;
 
-int EMPI_GLOBAL_flag_enter;
+EXTERN int EMPI_GLOBAL_flag_enter;
 
-int EMPI_GLOBAL_PAPI_eventSet_energy;
-char event_names[MAX_RAPL_EVENTS][PAPI_MAX_STR_LEN];
-char units[MAX_RAPL_EVENTS][PAPI_MIN_STR_LEN];
-MPI_Comm EMPI_GLOBAL_comm_energy;
+EXTERN int EMPI_GLOBAL_PAPI_eventSet_energy;
+EXTERN char event_names[MAX_RAPL_EVENTS][PAPI_MAX_STR_LEN];
+EXTERN char units[MAX_RAPL_EVENTS][PAPI_MIN_STR_LEN];
+EXTERN MPI_Comm EMPI_GLOBAL_comm_energy;
 
-MPI_Comm EMPI_COMM_WORLD; //EMPI Global communicator
+EXTERN MPI_Comm EMPI_COMM_WORLD; //EMPI Global communicator
 
-EMPI_Cost_type *EMPI_GLOBAL_cost;
+EXTERN EMPI_Cost_type *EMPI_GLOBAL_cost;
 
-EMPI_Data_type *EMPI_GLOBAL_Data; //register shared data structure
+EXTERN EMPI_Data_type *EMPI_GLOBAL_Data; //register shared data structure
 
-EMPI_host_type *EMPI_GLOBAL_hostlist; //physical resources
+EXTERN EMPI_host_type *EMPI_GLOBAL_hostlist; //physical resources
 
-MPI_Datatype EMPI_Monitor_Datatype;
+EXTERN MPI_Datatype EMPI_Monitor_Datatype;
 
-EMPI_Monitor_type EMPI_GLOBAL_monitor;
+EXTERN EMPI_Monitor_type EMPI_GLOBAL_monitor;
 
-EMPI_Comm_type* EMPI_GLOBAL_comms;
+EXTERN EMPI_Comm_type* EMPI_GLOBAL_comms;
 
-EMPI_Class_type* EMPI_GLOBAL_system_classes;
+EXTERN EMPI_Class_type* EMPI_GLOBAL_system_classes;
 
-char EMPI_GLOBAL_host_name[MPI_MAX_PROCESSOR_NAME];
+EXTERN char EMPI_GLOBAL_host_name[MPI_MAX_PROCESSOR_NAME];
 
-EMPI_Spawn_data EMPI_GLOBAL_spawn_data;
+EXTERN EMPI_Spawn_data EMPI_GLOBAL_spawn_data;
 
-EMPI_Monitor_type EMPI_GLOBAL_monitoring_data;
+EXTERN EMPI_Monitor_type EMPI_GLOBAL_monitoring_data;
 
-pthread_mutex_t EMPI_GLOBAL_server_lock;
+EXTERN pthread_mutex_t EMPI_GLOBAL_server_lock;
 
 // Core binding
-int EMPI_GLOBAL_corebindlist[EMPI_max_process][32];
+EXTERN int EMPI_GLOBAL_corebindlist[EMPI_max_process][32];
 
 // Poster thread active
-int EMPI_GLOBAL_posteractive;
+EXTERN int EMPI_GLOBAL_posteractive;
 
 // Large-array allocation
-int EMPI_array_alloc;
+EXTERN int EMPI_array_alloc;
 
 #endif
