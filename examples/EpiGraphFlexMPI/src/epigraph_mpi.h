@@ -14,6 +14,12 @@
  *																																		*
  ****************************************************************************************************************************************/
 
+#ifdef VARIABLES
+#define EXTERN
+#else
+#define EXTERN extern
+#endif
+
 /* include */
 #include <stdio.h>
 #include <stdlib.h>
@@ -169,4 +175,4 @@
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 // Working directory path
-char workdirpath[500];
+EXTERN char workdirpath[500];
