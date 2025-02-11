@@ -1,5 +1,13 @@
+# Binary files
+*
+!/**/
+!*.*
+
 # VSCode folder
 .vscode
 
 # MAC OS files
 .DS_Store
+
+# Non bak .sh files
+scripts/*.sh
